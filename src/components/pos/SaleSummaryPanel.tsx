@@ -33,6 +33,9 @@ import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import CreateIcon from "@mui/icons-material/Create";
 import AccessTimeIcon from "@mui/icons-material/AccessTime";
+import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import { Sale, Payment } from "@/services/saleService";
 import { Client } from "@/services/clientService";
 import { useSettings } from "@/context/SettingsContext";
@@ -88,6 +91,9 @@ interface SaleSummaryPanelProps {
   onSetReminder: (days: number) => Promise<void>;
   onRemoveReminder: () => Promise<void>;
   reminderLoading: boolean;
+  handleToggleQuote: () => void;
+  handleExportToFinance: () => void;
+  isExportingToFinance: boolean;
 }
 
 const METHOD_LABEL_KEYS: Record<string, string> = {
@@ -167,6 +173,9 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
   onSetReminder,
   onRemoveReminder,
   reminderLoading,
+  handleToggleQuote,
+  handleExportToFinance,
+  isExportingToFinance,
   canPayment = true,
   canCancelPayment = true,
   canDiscount = true,
@@ -267,6 +276,19 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
               {tSummary("invoiceHash", { id: selectedSale.id })}
             </Typography>
             <Stack direction="row" alignItems="center" gap={0.5}>
+              {selectedSale.is_quote && (
+                <Chip
+                  label={t("quoteChipLabel")}
+                  size="small"
+                  sx={{
+                    height: 18,
+                    fontSize: "0.6rem",
+                    fontWeight: 700,
+                    bgcolor: "warning.main",
+                    color: "white",
+                  }}
+                />
+              )}
               <Chip
                 label={isFullyPaid ? tSummary("paidStatus") : tSummary("unpaidStatus")}
                 size="small"
@@ -278,6 +300,64 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
                   color: "white",
                 }}
               />
+
+              {/* Quote mode toggle */}
+              <Tooltip
+                title={
+                  selectedSale.is_quote
+                    ? t("convertToInvoiceAction")
+                    : t("convertToQuoteAction")
+                }
+              >
+                <IconButton
+                  size="small"
+                  onClick={handleToggleQuote}
+                  sx={{
+                    p: 0.25,
+                    color: selectedSale.is_quote ? "warning.light" : "rgba(255,255,255,0.5)",
+                    "&:hover": { color: "white" },
+                  }}
+                >
+                  <RequestQuoteIcon sx={{ fontSize: 16 }} />
+                </IconButton>
+              </Tooltip>
+
+              {/* Export to finance */}
+              {!selectedSale.is_quote && (
+                <Tooltip
+                  title={
+                    selectedSale.finance_export_error
+                      ? t("lastExportFailedPrefix", { error: selectedSale.finance_export_error })
+                      : selectedSale.finance_exported_at
+                      ? t("exportedClickToResend")
+                      : t("exportToFinanceAction")
+                  }
+                >
+                  <IconButton
+                    size="small"
+                    onClick={handleExportToFinance}
+                    disabled={isExportingToFinance}
+                    sx={{
+                      p: 0.25,
+                      color: selectedSale.finance_export_error
+                        ? "error.light"
+                        : selectedSale.finance_exported_at
+                        ? "success.light"
+                        : "rgba(255,255,255,0.5)",
+                      "&:hover": { color: "white" },
+                    }}
+                  >
+                    {isExportingToFinance ? (
+                      <CircularProgress size={14} sx={{ color: "rgba(255,255,255,0.7)" }} />
+                    ) : selectedSale.finance_exported_at ? (
+                      <CheckCircleIcon sx={{ fontSize: 16 }} />
+                    ) : (
+                      <AccountBalanceIcon sx={{ fontSize: 16 }} />
+                    )}
+                  </IconButton>
+                </Tooltip>
+              )}
+
               {!isFullyPaid && (
                 <Tooltip
                   title={

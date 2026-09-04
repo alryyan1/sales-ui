@@ -136,7 +136,7 @@ const SalesReportPage: React.FC = () => {
                 className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium hover:bg-muted transition-colors"
               >
                 <FileText size={13} />
-                PDF
+                تقرير المبيعات 
               </button>
             </div>
 

@@ -93,6 +93,7 @@ export interface Sale {
   discount_amount?: string | number; // Discount stored as amount
   discount_type?: "percentage" | "fixed"; // UI-only; backend stores amount
   is_returned?: boolean; // Whether this sale has been returned
+  total_returned_amount?: string | number; // Total value refunded against this sale (sum of return items)
   is_quote?: boolean; // Whether this is a quote (no inventory deduction)
   finance_exported_at?: string | null; // When this sale was last sent to finance-api, if ever
   finance_export_error?: string | null; // Reason the last export attempt failed, if any
@@ -317,8 +318,8 @@ const saleService = {
    */
   getSalesSummary: async (
     queryParams?: string
-  ): Promise<{ total_amount: number; paid_amount: number; total_cost: number }> => {
-    const response = await apiClient.get<{ total_amount: number; paid_amount: number; total_cost: number }>(
+  ): Promise<{ total_amount: number; paid_amount: number; total_cost: number; returned_amount: number }> => {
+    const response = await apiClient.get<{ total_amount: number; paid_amount: number; total_cost: number; returned_amount: number }>(
       `/sales/summary${queryParams ? `?${queryParams}` : ""}`
     );
     return response.data;

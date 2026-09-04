@@ -82,6 +82,7 @@ const saleReturnService = {
     page?: number;
     per_page?: number;
     shift_id?: number | null;
+    user_id?: number | null;
     start_date?: string | null;
     end_date?: string | null;
   } = {}): Promise<{ data: SaleReturn[]; meta?: any }> => {
@@ -89,6 +90,7 @@ const saleReturnService = {
     searchParams.append("page", String(params.page ?? 1));
     searchParams.append("per_page", String(params.per_page ?? 15));
     if (params.shift_id) searchParams.append("shift_id", String(params.shift_id));
+    if (params.user_id) searchParams.append("user_id", String(params.user_id));
     if (params.start_date) searchParams.append("start_date", params.start_date);
     if (params.end_date) searchParams.append("end_date", params.end_date);
 

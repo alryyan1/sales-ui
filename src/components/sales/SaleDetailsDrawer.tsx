@@ -1,6 +1,5 @@
 // src/components/sales/SaleDetailsDrawer.tsx
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -11,7 +10,6 @@ import {
   Landmark,
   Loader2,
   Printer,
-  RotateCcw,
   Trash2,
   User,
 } from "lucide-react";
@@ -69,7 +67,6 @@ interface SaleDetailsDrawerProps {
 }
 
 export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: SaleDetailsDrawerProps) {
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const formatCurrency = useFormatCurrency();
   const { hasPermission } = useAuthorization();
@@ -78,7 +75,6 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
   const { t } = useTranslation("sales");
   const { t: tCommon } = useTranslation("common");
   const canDelete = hasPermission("حذف فاتورة");
-  const canReturn = hasPermission("view-sales-returns");
   const currencyCode = getSetting("currency_code", "SDG");
   const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
   const showA4CurrencyOptions = currencyCode === "SDG" && usdConversionEnabled;
@@ -166,12 +162,6 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
     } finally {
       setIsExporting(false);
     }
-  };
-
-  const handleRefund = () => {
-    if (!sale) return;
-    onOpenChange(false);
-    navigate(`/sales/returns/new?saleId=${sale.id}`);
   };
 
   return (
@@ -466,12 +456,6 @@ export function SaleDetailsDrawer({ saleId, open, onOpenChange, onChanged }: Sal
               </Button>
 
               <div className="ms-auto flex items-center gap-2">
-                {canReturn && !sale.is_returned && paid > 0 && (
-                  <Button type="button" variant="outline" size="sm" onClick={handleRefund} className="gap-1.5">
-                    <RotateCcw className="size-3.5" />
-                    {t("refund")}
-                  </Button>
-                )}
                 {canDelete && (sale.payments?.length ?? 0) === 0 && (
                   <Button
                     type="button"

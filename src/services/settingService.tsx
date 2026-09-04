@@ -55,6 +55,8 @@ export interface AppSettings {
   pos_show_out_of_stock_products?: boolean;
   /** Whether the expiry date column shows in the sale items table (SaleItemsTable, gallery page). Defaults to true. */
   pos_show_expiry_date_column?: boolean;
+  /** Whether the POS top-bar "search for a package/group" box is shown. Defaults to false (hidden). */
+  pos_show_package_search?: boolean;
   purchase_use_batch_number?: boolean;
   purchase_use_expiry_date?: boolean;
   purchase_sync_product_sale_price?: boolean;

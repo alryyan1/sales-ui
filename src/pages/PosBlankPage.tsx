@@ -18,16 +18,11 @@ import {
   FormControl,
   Popover,
   Stack,
-  Tooltip,
-  Chip,
 } from "@mui/material";
 import { CloudUploadIcon, FileText } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import AddIcon from "@mui/icons-material/Add";
 import CloseIcon from "@mui/icons-material/Close";
-import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
-import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 
 import apiClient from "@/lib/axios";
 import { toast } from "sonner";
@@ -43,7 +38,6 @@ import reportService from "@/services/reportService";
 import { formatNumber } from "@/constants";
 import { SaleItemsTable } from "@/components/sales/SaleItemsTable";
 import { PosSalesColumn } from "@/components/sales/PosSalesColumn";
-import ExpenseFormModal from "@/components/admin/expenses/ExpenseFormModal";
 
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import SalesReturnDialog from "@/components/sales/SalesReturnDialog";
@@ -51,7 +45,6 @@ import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import ExpiryProductsDialog, { PurchaseItem } from "@/components/pos/ExpiryProductsDialog";
-import TopSellingProductsDialog from "@/components/pos/TopSellingProductsDialog";
 import { uploadFileToFirebase } from "@/services/firebaseStorage";
 import { saveShiftToFirestore, saveSaleToFirestore, SaleData } from "@/services/firebaseStore";
 import {
@@ -175,7 +168,6 @@ const PosBlankPage: React.FC = () => {
     null,
   );
   const [deletingSaleId, setDeletingSaleId] = useState<number | null>(null);
-  const [expenseDialogOpen, setExpenseDialogOpen] = useState(false);
 
   // Client Autocomplete State
   const { data: clientsData } = useClients();
@@ -217,14 +209,30 @@ const PosBlankPage: React.FC = () => {
   >(null);
   const [expiryItems, setExpiryItems] = useState<PurchaseItem[]>([]);
   const [expiryItemsLoading, setExpiryItemsLoading] = useState(false);
-  // Top selling
-  const [topSellingDialogOpen, setTopSellingDialogOpen] = useState(false);
+  // Top-selling products used to pre-populate the product search when it's empty
+  const [topSellingOptions, setTopSellingOptions] = useState<Product[]>([]);
 
   useEffect(() => {
-    const handleOpenDialog = () => setTopSellingDialogOpen(true);
-    window.addEventListener("open-top-selling-dialog", handleOpenDialog);
-    return () =>
-      window.removeEventListener("open-top-selling-dialog", handleOpenDialog);
+    let cancelled = false;
+    (async () => {
+      try {
+        const best = await reportService.getBestSellingProducts(30, 10);
+        const ids = (best || []).map((p) => p.id);
+        if (ids.length === 0) return;
+        const products = await productService.getProductsByIds(ids);
+        // Preserve the best-selling ranking order
+        const byId = new Map(products.map((p) => [p.id, p]));
+        const ordered = ids
+          .map((id) => byId.get(id))
+          .filter((p): p is Product => Boolean(p));
+        if (!cancelled) setTopSellingOptions(ordered);
+      } catch {
+        /* silent – search still works without the pre-populated list */
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Pre-fill add-payment amount with the sale's due (remainder) when selection changes
@@ -299,7 +307,7 @@ const PosBlankPage: React.FC = () => {
 
   useEffect(() => {
     if (!productInputValue.trim()) {
-      setProductOptions([]);
+      setProductOptions(topSellingOptions);
       return;
     }
     const timer = setTimeout(() => {
@@ -340,7 +348,7 @@ const PosBlankPage: React.FC = () => {
         .finally(() => setProductSearchLoading(false));
     }, 300);
     return () => clearTimeout(timer);
-  }, [productInputValue, user?.warehouse_id, getSetting, selectedSale?.is_quote]);
+  }, [productInputValue, user?.warehouse_id, getSetting, selectedSale?.is_quote, topSellingOptions]);
 
   // Handle Package addition from TopAppBar
   const handleAddPackageToSale = useCallback(
@@ -1835,60 +1843,6 @@ const PosBlankPage: React.FC = () => {
             inputRef={productInputRef}
           />
 
-          {/* Quote mode toggle */}
-          {selectedSale && (
-            <Tooltip title={selectedSale.is_quote ? t("convertToInvoiceAction") : t("convertToQuoteAction")}>
-              <span>
-                <IconButton
-                  onClick={handleToggleQuote}
-                  color={selectedSale.is_quote ? "warning" : "default"}
-                  sx={{ borderRadius: 2 }}
-                >
-                  <RequestQuoteIcon />
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-          {selectedSale?.is_quote && (
-            <Chip label={t("quoteChipLabel")} color="warning" size="small" sx={{ fontWeight: 700 }} />
-          )}
-
-          {/* Export to finance */}
-          {selectedSale && !selectedSale.is_quote && (
-            <Tooltip
-              title={
-                selectedSale.finance_export_error
-                  ? t("lastExportFailedPrefix", { error: selectedSale.finance_export_error })
-                  : selectedSale.finance_exported_at
-                  ? t("exportedClickToResend")
-                  : t("exportToFinanceAction")
-              }
-            >
-              <span>
-                <IconButton
-                  onClick={handleExportToFinance}
-                  disabled={isExportingToFinance}
-                  color={
-                    selectedSale.finance_export_error
-                      ? "error"
-                      : selectedSale.finance_exported_at
-                      ? "success"
-                      : "default"
-                  }
-                  sx={{ borderRadius: 2 }}
-                >
-                  {isExportingToFinance ? (
-                    <CircularProgress size={20} />
-                  ) : selectedSale.finance_exported_at ? (
-                    <CheckCircleIcon />
-                  ) : (
-                    <AccountBalanceIcon />
-                  )}
-                </IconButton>
-              </span>
-            </Tooltip>
-          )}
-
           {/* Create new sale */}
           <Button
             variant="contained"
@@ -1908,21 +1862,7 @@ const PosBlankPage: React.FC = () => {
             )}
           </Button>
 
-          {/* Add expense */}
-          <Button
-            variant="outlined"
-            color="secondary"
-            onClick={() => setExpenseDialogOpen(true)}
-            sx={{
-              textTransform: "none",
-              fontWeight: 600,
-              borderRadius: 2,
-            }}
-          >
-            {t("addExpenseButton")}
-          </Button>
-
-          {/* Open / Close shift button */}
+          {/* Open / Close shift button — pushed to the far end of the toolbar */}
           <Button
             variant={isShiftOpen ? "outlined" : "contained"}
             color={isShiftOpen ? "error" : "primary"}
@@ -1932,6 +1872,7 @@ const PosBlankPage: React.FC = () => {
               textTransform: "none",
               fontWeight: 600,
               borderRadius: 2,
+              marginInlineStart: "auto",
             }}
           >
             {shiftLoading ? (
@@ -2149,6 +2090,9 @@ const PosBlankPage: React.FC = () => {
             onSetReminder={handleSetReminder}
             onRemoveReminder={handleRemoveReminder}
             reminderLoading={reminderLoading}
+            handleToggleQuote={handleToggleQuote}
+            handleExportToFinance={handleExportToFinance}
+            isExportingToFinance={isExportingToFinance}
           />
         </Box>
       </Box>
@@ -2200,19 +2144,6 @@ const PosBlankPage: React.FC = () => {
         title={shift ? t("shiftReportHash", { id: shift.id }) : t("shiftReportTitle")}
       />
 
-      {/* Add expense dialog */}
-      <ExpenseFormModal
-        isOpen={expenseDialogOpen}
-        onClose={() => setExpenseDialogOpen(false)}
-        expenseToEdit={null}
-        onSaveSuccess={() => {
-          toast.success(t("expenseAddedToast"));
-          setExpenseDialogOpen(false);
-          fetchCurrentShift();
-        }}
-        shiftId={shift?.id ?? null}
-      />
-
       <ExpiryProductsDialog
         open={expiryDialogOpen}
         onClose={handleCloseExpiryDialog}
@@ -2221,12 +2152,6 @@ const PosBlankPage: React.FC = () => {
         loading={expiryItemsLoading}
         onAddToCart={handleAddExpiryProductToCart}
         onMoveProduct={handleMoveExpiredProduct}
-      />
-
-      <TopSellingProductsDialog
-        open={topSellingDialogOpen}
-        onClose={() => setTopSellingDialogOpen(false)}
-        onAddProduct={handleAddExpiryProductToCart}
       />
 
       <ClientFormModal

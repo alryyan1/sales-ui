@@ -17,5 +17,6 @@
     "submitButtonLabel": "Sign In",
     "submitButtonVerifying": "Verifying...",
     "loginFailedDefault": "Login failed. Please try again.",
+    "idleLogout": "You were signed out automatically due to inactivity. Please sign in again.",
     "footerCopyright": "© {{year}} Sales Management System. All rights reserved."
 }

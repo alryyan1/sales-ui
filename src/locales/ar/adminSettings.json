@@ -95,6 +95,8 @@
     "showOutOfStockDescription": "عند التفعيل، ستظهر المنتجات التي رصيدها صفراً أو أقل في نتائج بحث نقطة البيع.",
     "showExpiryDateColumnLabel": "إظهار عمود تاريخ الانتهاء في جدول الأصناف",
     "showExpiryDateColumnDescription": "عند التعطيل، يُخفى عمود تاريخ الانتهاء من جدول أصناف الفاتورة في صفحة المعرض.",
+    "showPackageSearchLabel": "إظهار خانة البحث عن مجموعة",
+    "showPackageSearchDescription": "عند التعطيل، تُخفى خانة \"ابحث عن مجموعة\" من الشريط العلوي في شاشة نقطة البيع.",
     "paymentMethodsGroupTitle": "طرق الدفع في نقطة البيع (Payment Methods)",
     "paymentMethodsHelp": "يجب أن تبقى طريقة دفع واحدة على الأقل مفعّلة.",
     "usdGroupTitle": "سعر صرف الدولار (USD Conversion)",

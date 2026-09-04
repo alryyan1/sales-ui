@@ -1,56 +1,67 @@
 // src/pages/sales/SalesReturnsListPage.tsx
 import React, { useMemo } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
+import dayjs, { Dayjs } from "dayjs";
 import {
-  Box,
+  App as AntApp,
   Button,
   Card,
-  CardContent,
-  Typography,
-  Stack,
-  TextField,
+  ConfigProvider,
+  DatePicker,
+  Flex,
+  Select,
+  Space,
+  Statistic,
   Table,
-  TableHead,
-  TableRow,
-  TableCell,
-  TableBody,
-  Chip,
-  Divider,
-  CircularProgress,
-  IconButton,
+  Tag,
   Tooltip,
-} from "@mui/material";
-import { useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { format } from "date-fns";
-import { useTranslation } from "react-i18next";
+  Typography,
+  theme as antdTheme,
+} from "antd";
+import type { TableProps } from "antd";
+import arEG from "antd/locale/ar_EG";
+import enUS from "antd/locale/en_US";
+import "dayjs/locale/ar";
 import {
   ArrowLeft,
   ArrowRight,
-  RefreshCw,
-  RotateCcw,
-  Plus,
-  PackageX,
   DollarSign,
-  ChevronLeft,
-  ChevronRight,
+  PackageX,
+  RefreshCw,
 } from "lucide-react";
-import saleReturnService, { SaleReturn } from "@/services/saleReturnService";
-import { formatNumber } from "@/constants";
-import { useLanguage } from "@/context/LanguageContext";
 
-const METHOD_COLORS: Record<string, "default" | "success" | "info" | "warning"> = {
-  cash: "success",
-  bankak: "info",
-  fawry: "warning",
+import saleReturnService, { SaleReturn } from "@/services/saleReturnService";
+import apiClient from "@/lib/axios";
+import { useShifts } from "@/hooks/useShifts";
+import { useFormatCurrency } from "@/hooks/useFormatCurrency";
+import { useLanguage } from "@/context/LanguageContext";
+import { useTheme } from "@/context/ThemeContext";
+
+const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
+
+const PER_PAGE = 20;
+
+const METHOD_COLORS: Record<string, string> = {
+  cash: "green",
+  bankak: "blue",
+  fawry: "gold",
   ocash: "default",
-  bank_transfer: "info",
-  card: "info",
+  bank_transfer: "blue",
+  card: "geekblue",
 };
+
+const returnItemsTotal = (r: SaleReturn) =>
+  r.items?.reduce((acc, item) => acc + Number(item.price) * Number(item.quantity), 0) ?? 0;
 
 const SalesReturnsListPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { direction } = useLanguage();
+  const { direction, language } = useLanguage();
+  const { resolvedTheme } = useTheme();
+  const formatCurrency = useFormatCurrency();
   const { t } = useTranslation("sales");
   const { t: tCommon } = useTranslation("common");
 
@@ -63,383 +74,298 @@ const SalesReturnsListPage: React.FC = () => {
     card: t("paymentMethodCard"),
   };
 
-  const today = format(new Date(), "yyyy-MM-dd");
+  const today = dayjs().format("YYYY-MM-DD");
   const startDate = searchParams.get("startDate") || today;
   const endDate = searchParams.get("endDate") || today;
-  const shiftIdParam = searchParams.get("shiftId");
-  const pageParam = Number(searchParams.get("page") || "1");
+  const shiftId = searchParams.get("shiftId") || "";
+  const userId = searchParams.get("userId") || "";
+  const page = Number(searchParams.get("page") || "1");
 
-  const selectedShiftId = useMemo(
-    () => (shiftIdParam ? Number(shiftIdParam) : undefined),
-    [shiftIdParam],
-  );
+  const shiftsQuery = useShifts();
+  const usersQuery = useQuery({
+    queryKey: ["users-list-filters"],
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: { id: number; name: string }[] }>("/users/list");
+      return res.data?.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
 
   const {
     data: returnsResult,
     isLoading,
-    refetch,
     isFetching,
+    refetch,
   } = useQuery({
-    queryKey: ["sales-returns-list", startDate, endDate, selectedShiftId, pageParam],
+    queryKey: ["sales-returns-list", startDate, endDate, shiftId, userId, page],
     queryFn: () =>
       saleReturnService.getSaleReturns({
         start_date: startDate,
         end_date: endDate,
-        shift_id: selectedShiftId ?? null,
-        page: pageParam,
-        per_page: 20,
+        shift_id: shiftId ? Number(shiftId) : null,
+        user_id: userId ? Number(userId) : null,
+        page,
+        per_page: PER_PAGE,
       }),
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 
   const returns: SaleReturn[] = returnsResult?.data ?? [];
-  const meta = returnsResult?.meta ?? {
-    current_page: pageParam,
-    last_page: 1,
-    total: returns.length,
-  };
+  const meta = returnsResult?.meta ?? { current_page: page, last_page: 1, total: returns.length };
 
-  const totalAmount = useMemo(
-    () =>
-      returns.reduce((sum, r) => {
-        const itemsTotal =
-          r.items?.reduce(
-            (acc, item) => acc + Number(item.price) * Number(item.quantity),
-            0,
-          ) ?? 0;
-        return sum + itemsTotal;
-      }, 0),
+  const pageTotal = useMemo(
+    () => returns.reduce((sum, r) => sum + returnItemsTotal(r), 0),
     [returns],
   );
 
-  const handleFilterSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget as HTMLFormElement);
-    const newStart = String(formData.get("startDate") || "");
-    const newEnd = String(formData.get("endDate") || "");
-    const newShiftId = String(formData.get("shiftId") || "");
-
-    const params = new URLSearchParams();
-    if (newStart) params.set("startDate", newStart);
-    if (newEnd) params.set("endDate", newEnd);
-    if (newShiftId) params.set("shiftId", newShiftId);
-    params.set("page", "1");
-    setSearchParams(params);
+  const patchParams = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch).forEach(([key, value]) => {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    });
+    setSearchParams(next);
   };
 
-  const handlePageChange = (delta: number) => {
-    const next = Math.min(
-      Math.max(1, meta.current_page + delta),
-      meta.last_page ?? meta.current_page,
-    );
-    if (next === meta.current_page) return;
-    const params = new URLSearchParams(searchParams);
-    params.set("page", String(next));
-    setSearchParams(params);
+  const handleRangeChange = (values: null | (Dayjs | null)[]) => {
+    patchParams({
+      startDate: values?.[0] ? values[0].format("YYYY-MM-DD") : null,
+      endDate: values?.[1] ? values[1].format("YYYY-MM-DD") : null,
+      page: "1",
+    });
   };
+
+  const resetFilters = () => {
+    setSearchParams(new URLSearchParams());
+  };
+
+  const hasActiveFilters =
+    !!shiftId || !!userId || startDate !== today || endDate !== today;
+
+  const columns: TableProps<SaleReturn>["columns"] = [
+    {
+      title: t("rowNumberColumn"),
+      key: "row",
+      width: 56,
+      align: "center",
+      render: (_v, _r, index) => (
+        <Text type="secondary">{(page - 1) * PER_PAGE + index + 1}</Text>
+      ),
+    },
+    {
+      title: t("date"),
+      dataIndex: "created_at",
+      key: "date",
+      width: 150,
+      render: (value: string | null) =>
+        value ? (
+          <Space direction="vertical" size={0}>
+            <Text>{dayjs(value).format("YYYY-MM-DD")}</Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {dayjs(value).format("HH:mm")}
+            </Text>
+          </Space>
+        ) : (
+          "—"
+        ),
+    },
+    {
+      title: t("invoiceHashColumn"),
+      dataIndex: "sale_id",
+      key: "sale_id",
+      width: 100,
+      render: (saleId: number | null) =>
+        saleId != null ? <Tag>{`#${saleId}`}</Tag> : "—",
+    },
+    {
+      title: t("phoneNumberColumn"),
+      dataIndex: "phone_number",
+      key: "phone_number",
+      width: 130,
+      render: (phone: string | null) => <span dir="ltr">{phone ?? "—"}</span>,
+    },
+    {
+      title: t("user"),
+      key: "user",
+      width: 140,
+      render: (_v, r) => r.user?.name ?? "—",
+    },
+    {
+      title: t("shiftColumn"),
+      dataIndex: "shift_id",
+      key: "shift_id",
+      width: 90,
+      render: (id: number | null) =>
+        id ? <Text type="secondary">{`#${id}`}</Text> : "—",
+    },
+    {
+      title: t("reasonColumn"),
+      dataIndex: "reason",
+      key: "reason",
+      ellipsis: true,
+      render: (reason: string | null) => reason ?? "—",
+    },
+    {
+      title: t("returnMethodColumn"),
+      dataIndex: "returned_payment_method",
+      key: "method",
+      align: "center",
+      width: 130,
+      render: (method: string) => {
+        const key = method ?? "";
+        return (
+          <Tag color={METHOD_COLORS[key] ?? "default"}>
+            {METHOD_LABELS[key] ?? key ?? "—"}
+          </Tag>
+        );
+      },
+    },
+    {
+      title: t("itemsColumnShort"),
+      key: "items",
+      align: "center",
+      width: 80,
+      render: (_v, r) => <Tag>{r.items?.length ?? 0}</Tag>,
+    },
+    {
+      title: t("totalColumn"),
+      key: "total",
+      align: "right",
+      width: 130,
+      render: (_v, r) => (
+        <Text strong type="danger" style={{ whiteSpace: "nowrap" }}>
+          {formatCurrency(returnItemsTotal(r))}
+        </Text>
+      ),
+    },
+  ];
 
   return (
-    <Box sx={{ p: { xs: 1.5, md: 2 }, display: "flex", flexDirection: "column", gap: 1.5 }}>
-
-      {/* Header */}
-      <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-        <IconButton onClick={() => navigate("/sales/pos-blank")} size="small">
-          {direction === "rtl" ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
-        </IconButton>
-
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography variant="h6" fontWeight={700} noWrap>
-            {t("returnsPageHeading")}
-          </Typography>
-          <Typography variant="caption" color="text.secondary">
-            {t("returnsPageSubtitle")}
-          </Typography>
-        </Box>
-
-   
-      </Box>
-
-      {/* Summary Strip */}
-      <Box sx={{ display: "grid", gridTemplateColumns: "200px 200px", gap: 1.5 }}>
-        {[
-          {
-            label: t("returnsCountLabel"),
-            value: formatNumber(meta.total ?? returns.length),
-            icon: <PackageX size={18} />,
-            color: "warning" as const,
-          },
-          {
-            label: t("totalValueLabel"),
-            value: formatNumber(totalAmount),
-            icon: <DollarSign size={18} />,
-            color: "error" as const,
-          },
-        ].map(({ label, value, icon, color }) => (
-          <Card key={label} variant="outlined" sx={{ borderRadius: 2 }}>
-            <CardContent sx={{ p: "12px !important" }}>
-              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                <Box
-                  sx={{
-                    p: 1,
-                    borderRadius: 1.5,
-                    bgcolor: `${color}.50`,
-                    color: `${color}.main`,
-                    display: "flex",
-                  }}
-                >
-                  {icon}
-                </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary" display="block">
-                    {label}
-                  </Typography>
-                  <Typography variant="subtitle1" fontWeight={700} color={`${color}.main`} lineHeight={1.2}>
-                    {value}
-                  </Typography>
-                </Box>
-              </Box>
-            </CardContent>
-          </Card>
-        ))}
-      </Box>
-
-      {/* Filters */}
-      <Card variant="outlined" sx={{ borderRadius: 2 }}>
-        <CardContent sx={{ p: "12px !important" }}>
-          <Box
-            component="form"
-            onSubmit={handleFilterSubmit}
-            sx={{ display: "flex", flexWrap: "wrap", gap: 1.5, alignItems: "flex-end" }}
-          >
-            <TextField
-              name="startDate"
-              type="date"
-              size="small"
-              label={t("fromDateLabel")}
-              InputLabelProps={{ shrink: true }}
-              defaultValue={startDate}
-              sx={{ width: 160 }}
-            />
-            <TextField
-              name="endDate"
-              type="date"
-              size="small"
-              label={t("toDateLabel")}
-              InputLabelProps={{ shrink: true }}
-              defaultValue={endDate}
-              sx={{ width: 160 }}
-            />
-            <TextField
-              name="shiftId"
-              size="small"
-              label={t("shiftNumberLabel")}
-              defaultValue={shiftIdParam || ""}
-              sx={{ width: 140 }}
-            />
+    <ConfigProvider
+      direction={direction}
+      locale={language === "ar" ? arEG : enUS}
+      theme={{
+        algorithm:
+          resolvedTheme === "dark"
+            ? antdTheme.darkAlgorithm
+            : antdTheme.defaultAlgorithm,
+      }}
+    >
+      <AntApp>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Header */}
+          <Flex align="center" gap={12} wrap>
             <Button
-              type="submit"
-              variant="contained"
-              size="small"
-              sx={{ textTransform: "none", height: 36 }}
-            >
-              {t("applyButtonShort")}
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-
-      {/* Table Card */}
-      <Card
-        variant="outlined"
-        sx={{
-          borderRadius: 2,
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          minHeight: 0,
-          maxHeight: "calc(100vh - 300px)",
-        }}
-      >
-        <CardContent
-          sx={{
-            p: "12px !important",
-            flex: 1,
-            display: "flex",
-            flexDirection: "column",
-            overflow: "hidden",
-          }}
-        >
-          {/* Table header row */}
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 1 }}>
-            <RotateCcw size={15} style={{ color: "var(--mui-palette-text-secondary)" }} />
-            <Typography variant="subtitle2" fontWeight={700}>
-              {t("returnsListLabel")}
-            </Typography>
-            <Chip
-              label={meta.total ?? returns.length}
-              size="small"
-              sx={{ height: 20, fontSize: "0.7rem" }}
+              type="text"
+              icon={direction === "rtl" ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
+              onClick={() => navigate("/sales/pos-blank")}
             />
-            <Box sx={{ flex: 1 }} />
-            <Tooltip title={tCommon("refresh")}>
-              <span>
-                <IconButton size="small" onClick={() => refetch()} disabled={isFetching}>
-                  <RefreshCw size={15} className={isFetching ? "animate-spin" : ""} />
-                </IconButton>
-              </span>
-            </Tooltip>
-          </Box>
-          <Divider sx={{ mb: 1 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <Title level={4} style={{ margin: 0 }}>
+                {t("returnsPageHeading")}
+              </Title>
+              <Text type="secondary">{t("returnsPageSubtitle")}</Text>
+            </div>
+          </Flex>
 
-          <Box sx={{ flex: 1, overflow: "auto" }}>
-            {isLoading ? (
-              <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 8, gap: 1.5 }}>
-                <CircularProgress size={24} />
-                <Typography color="text.secondary" variant="body2">{tCommon("loading")}</Typography>
-              </Box>
-            ) : returns.length === 0 ? (
-              <Box sx={{ textAlign: "center", py: 8, color: "text.secondary" }}>
-                <PackageX size={40} style={{ opacity: 0.25, marginBottom: 8 }} />
-                <Typography variant="body2">{t("noReturnsMatchFilters")}</Typography>
-              </Box>
-            ) : (
-              <Table size="small" stickyHeader>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 700, width: 40 }}>{t("rowNumberColumn")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>{t("date")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>{t("invoiceHashColumn")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>{t("phoneNumberColumn")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>{t("user")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>{t("shiftColumn")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }}>{t("reasonColumn")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="center">{t("returnMethodColumn")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="center">{t("itemsColumnShort")}</TableCell>
-                    <TableCell sx={{ fontWeight: 700 }} align="right">{t("totalColumn")}</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {returns.map((r, index) => {
-                    const itemsTotal =
-                      r.items?.reduce(
-                        (acc, item) => acc + Number(item.price) * Number(item.quantity),
-                        0,
-                      ) ?? 0;
-                    const method = r.returned_payment_method ?? "";
-                    const methodLabel = METHOD_LABELS[method] ?? method;
-                    const methodColor = METHOD_COLORS[method] ?? "default";
+          {/* Summary */}
+          <Flex gap={16} wrap>
+            <Card size="small" style={{ minWidth: 200 }}>
+              <Statistic
+                title={t("returnsCountLabel")}
+                value={meta.total ?? returns.length}
+                prefix={<PackageX size={16} />}
+              />
+            </Card>
+            <Card size="small" style={{ minWidth: 220 }}>
+              <Statistic
+                title={t("totalValueLabel")}
+                value={formatCurrency(pageTotal)}
+                prefix={<DollarSign size={16} />}
+                valueStyle={{ color: "#cf1322" }}
+              />
+            </Card>
+          </Flex>
 
-                    return (
-                      <TableRow key={r.id} hover sx={{ "&:last-child td": { border: 0 } }}>
-                        <TableCell sx={{ fontSize: "0.75rem", color: "text.disabled", textAlign: "center" }}>
-                          {(pageParam - 1) * 20 + index + 1}
-                        </TableCell>
+          {/* Filters */}
+          <Card size="small">
+            <Flex gap={12} wrap align="center">
+              <RangePicker
+                allowClear={false}
+                value={[dayjs(startDate), dayjs(endDate)]}
+                onChange={handleRangeChange}
+              />
+              <Select
+                style={{ minWidth: 200 }}
+                placeholder={t("allShifts")}
+                allowClear
+                loading={shiftsQuery.isLoading}
+                value={shiftId || undefined}
+                onChange={(value) => patchParams({ shiftId: value ?? null, page: "1" })}
+                options={(shiftsQuery.data ?? []).map((s) => ({
+                  value: String(s.id),
+                  label:
+                    (s.name ? s.name : t("shiftHashFilter", { id: s.id })) +
+                    (s.shift_date ? ` (${s.shift_date})` : ""),
+                }))}
+              />
+              <Select
+                style={{ minWidth: 200 }}
+                placeholder={t("allUsers")}
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                loading={usersQuery.isLoading}
+                value={userId || undefined}
+                onChange={(value) => patchParams({ userId: value ?? null, page: "1" })}
+                options={(usersQuery.data ?? []).map((u) => ({
+                  value: String(u.id),
+                  label: u.name,
+                }))}
+              />
+              {hasActiveFilters && (
+                <Button type="link" onClick={resetFilters}>
+                  {t("clearFiltersButton")}
+                </Button>
+              )}
+              <div style={{ flex: 1 }} />
+              <Tooltip title={tCommon("refresh")}>
+                <Button
+                  icon={
+                    <RefreshCw size={16} className={isFetching ? "animate-spin" : ""} />
+                  }
+                  onClick={() => refetch()}
+                  loading={isFetching && !isLoading}
+                />
+              </Tooltip>
+            </Flex>
+          </Card>
 
-                        <TableCell sx={{ whiteSpace: "nowrap" }}>
-                          <Typography variant="body2" fontSize="0.8rem">
-                            {r.created_at
-                              ? format(new Date(r.created_at), "yyyy-MM-dd")
-                              : "—"}
-                          </Typography>
-                          {r.created_at && (
-                            <Typography variant="caption" color="text.disabled" display="block" fontSize="0.7rem">
-                              {format(new Date(r.created_at), "HH:mm")}
-                            </Typography>
-                          )}
-                        </TableCell>
-
-                        <TableCell sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
-                          {r.sale_id != null ? (
-                            <Chip
-                              label={`#${r.sale_id}`}
-                              size="small"
-                              variant="outlined"
-                              sx={{ height: 18, fontSize: "0.7rem" }}
-                            />
-                          ) : "—"}
-                        </TableCell>
-
-                        <TableCell sx={{ fontSize: "0.8rem" }} dir="ltr">
-                          {r.phone_number ?? "—"}
-                        </TableCell>
-
-                        <TableCell sx={{ fontSize: "0.8rem" }}>
-                          {r.user?.name ?? "—"}
-                        </TableCell>
-
-                        <TableCell sx={{ fontSize: "0.8rem", color: "text.secondary" }}>
-                          {r.shift_id ? `#${r.shift_id}` : "—"}
-                        </TableCell>
-
-                        <TableCell sx={{ fontSize: "0.8rem", maxWidth: 160 }}>
-                          <Typography
-                            variant="body2"
-                            fontSize="0.8rem"
-                            noWrap
-                            title={r.reason ?? ""}
-                          >
-                            {r.reason ?? "—"}
-                          </Typography>
-                        </TableCell>
-
-                        <TableCell align="center">
-                          <Chip
-                            label={methodLabel}
-                            size="small"
-                            color={methodColor}
-                            variant="outlined"
-                            sx={{ height: 20, fontSize: "0.7rem" }}
-                          />
-                        </TableCell>
-
-                        <TableCell align="center">
-                          <Chip
-                            label={r.items?.length ?? 0}
-                            size="small"
-                            variant="outlined"
-                            sx={{ height: 18, fontSize: "0.7rem" }}
-                          />
-                        </TableCell>
-
-                        <TableCell align="right" dir="ltr" sx={{ fontWeight: 700, fontSize: "0.82rem", color: "error.main" }}>
-                          {formatNumber(itemsTotal)}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </Box>
-
-          {/* Pagination */}
-          {meta.last_page > 1 && (
-            <>
-              <Divider sx={{ mt: 1 }} />
-              <Stack direction="row" justifyContent="center" alignItems="center" spacing={1} pt={1}>
-                <IconButton
-                  size="small"
-                  onClick={() => handlePageChange(-1)}
-                  disabled={meta.current_page <= 1}
-                >
-                  {direction === "rtl" ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-                </IconButton>
-                <Typography variant="caption" color="text.secondary">
-                  {t("pageOfTotalShort", { page: meta.current_page, total: meta.last_page })}
-                </Typography>
-                <IconButton
-                  size="small"
-                  onClick={() => handlePageChange(1)}
-                  disabled={meta.current_page >= meta.last_page}
-                >
-                  {direction === "rtl" ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-                </IconButton>
-              </Stack>
-            </>
-          )}
-        </CardContent>
-      </Card>
-    </Box>
+          {/* Table */}
+          <Card size="small" styles={{ body: { padding: 0 } }}>
+            <Table<SaleReturn>
+              rowKey="id"
+              size="small"
+              columns={columns}
+              dataSource={returns}
+              loading={isLoading}
+              scroll={{ x: 900 }}
+              locale={{ emptyText: t("noReturnsMatchFilters") }}
+              pagination={{
+                current: meta.current_page ?? page,
+                pageSize: PER_PAGE,
+                total: meta.total ?? returns.length,
+                showSizeChanger: false,
+                showTotal: (total) => t("returnsCountLabel") + `: ${total}`,
+              }}
+              onChange={(pagination) =>
+                patchParams({ page: String(pagination.current ?? 1) })
+              }
+            />
+          </Card>
+        </div>
+      </AntApp>
+    </ConfigProvider>
   );
 };
 

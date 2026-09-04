@@ -29,7 +29,6 @@ import WarehouseProductsPage from "./pages/warehouses/WarehouseProductsPage";
 import PosPage from "./pages/pos/PosPage";
 import PosBlankPage from "./pages/PosBlankPage";
 import SalesListPage from "./pages/sales/SalesListPage";
-import SalesReturnsPage from "./pages/sales/SalesReturnsPage";
 import SalesReturnsListPage from "./pages/sales/SalesReturnsListPage";
 import SaleDetailsPage from "./pages/sales/SaleDetailsPage";
 // Reports
@@ -199,25 +198,11 @@ const router = createHashRouter([
               },
               {
                 path: "returns",
-                children: [
-                  {
-                    index: true,
-                    element: (
-                      <PermissionGuard requiredPermission="view-sales-returns">
-                        <SalesReturnsListPage />
-                      </PermissionGuard>
-                    ),
-                  },
-                  // New simple POS-based sales return creation page
-                  {
-                    path: "new",
-                    element: (
-                      <PermissionGuard requiredPermission="view-sales-returns">
-                        <SalesReturnsPage />
-                      </PermissionGuard>
-                    ),
-                  },
-                ],
+                element: (
+                  <PermissionGuard requiredPermission="view-sales-returns">
+                    <SalesReturnsListPage />
+                  </PermissionGuard>
+                ),
               },
               {
                 path: ":id",

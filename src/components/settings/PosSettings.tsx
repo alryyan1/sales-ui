@@ -208,6 +208,18 @@ export const PosSettings = ({ control }: PosSettingsProps) => {
             />
           )}
         />
+        <Controller
+          name="pos_show_package_search"
+          control={control}
+          render={({ field }) => (
+            <SwitchField
+              label={t("pos.showPackageSearchLabel")}
+              description={t("pos.showPackageSearchDescription")}
+              checked={field.value ?? false}
+              onCheckedChange={field.onChange}
+            />
+          )}
+        />
       </SettingsGroup>
 
       <Separator />

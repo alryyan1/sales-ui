@@ -18,6 +18,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import authService from "@/services/authService";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
+import { IDLE_LOGOUT_FLAG } from "@/hooks/useIdleLogout";
 
 const LoginPage: React.FC = () => {
   const { t } = useTranslation("login");
@@ -28,6 +29,14 @@ const LoginPage: React.FC = () => {
 
   const [serverError, setServerError] = useState<string | null>(null);
   const [showPassword, setShowPassword] = useState(false);
+
+  // Explain an automatic inactivity logout (flag set by useIdleLogout).
+  useEffect(() => {
+    if (sessionStorage.getItem(IDLE_LOGOUT_FLAG)) {
+      sessionStorage.removeItem(IDLE_LOGOUT_FLAG);
+      setServerError(t("idleLogout"));
+    }
+  }, [t]);
 
   const loginSchema = useMemo(
     () =>

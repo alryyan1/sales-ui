@@ -3,12 +3,14 @@ import React from "react";
 import { Link as RouterLink } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import {
+  AlertTriangle,
   BarChart3,
   ChevronDown,
   LogOut,
   Settings as SettingsIcon,
   ShieldCheck,
   UserCircle,
+  Warehouse,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -73,8 +75,22 @@ const UserMenu: React.FC<UserMenuProps> = ({ user }) => {
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuLabel className="truncate">
-          {user.name || user.username}
+        <DropdownMenuLabel className="flex flex-col gap-1">
+          <span className="truncate">{user.name || user.username}</span>
+          {user.warehouse ? (
+            <RouterLink
+              to={`/admin/warehouses/${user.warehouse.id}/products`}
+              className="flex items-center gap-1 text-xs font-normal text-primary hover:underline"
+            >
+              <Warehouse className="size-3 shrink-0" />
+              <span className="truncate">{user.warehouse.name}</span>
+            </RouterLink>
+          ) : (
+            <span className="flex items-center gap-1 text-xs font-normal text-destructive">
+              <AlertTriangle className="size-3 shrink-0" />
+              لا يوجد مستودع
+            </span>
+          )}
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>

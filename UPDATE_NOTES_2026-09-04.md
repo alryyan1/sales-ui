@@ -151,6 +151,31 @@ future date/time and notify the customer over WhatsApp.
 - `LoginPage.tsx` — username and password fields forced to LTR / left-aligned so
   credentials read correctly under an RTL UI.
 
+### Session hardening (new)
+
+Previously an API token never expired and no idle timeout existed, so an
+unattended POS terminal stayed logged in indefinitely.
+
+- **Idle auto-logout (`sales-ui`)** — `hooks/useIdleLogout.ts` (new) signs the
+  user out after a period of no mouse/keyboard/touch/scroll activity, then sends
+  them to `/login` with an explanatory message. Wired into `RootLayout.tsx`;
+  activity is shared across tabs of the same browser via a `localStorage`
+  timestamp. Timeout is `VITE_IDLE_TIMEOUT_MINUTES` (default **30**, `0`
+  disables). `LoginPage.tsx` shows the "signed out due to inactivity" notice.
+  `locales/{ar,en}/login.json` — `idleLogout` key.
+- **Token expiration (`sales-api`)** — `config/sanctum.php` `expiration` is now
+  `SANCTUM_TOKEN_EXPIRATION` minutes (default **720** = 12h ≈ one shift); set to
+  `0` to keep the old non-expiring behaviour. The frontend already redirects to
+  login on the resulting `401`.
+- **Token pruning (`sales-api`)** — `app/Console/Kernel.php` schedules
+  `sanctum:prune-expired --hours=24` daily so `personal_access_tokens` stops
+  growing without bound.
+
+> **Deploy note:** setting a token expiration makes **all existing tokens
+> immediately expired** (they have no `expires_at` and an old `created_at`), so
+> every user is forced to log in once after deploy. Re-run `php artisan
+> config:cache` if config is cached, and make sure `schedule:run` is registered.
+
 ---
 
 ## 6. Config / tooling (backend)

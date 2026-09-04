@@ -1,6 +1,6 @@
 // src/components/layouts/TopAppBar.tsx
 import React from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import {
@@ -12,8 +12,6 @@ import {
   Loader2,
   Menu as MenuIcon,
   Search,
-  TrendingUp,
-  Warehouse,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -52,7 +50,6 @@ interface TopAppBarProps {
 }
 
 const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapsed }) => {
-  const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("pos");
   const { user } = useAuth();
@@ -71,6 +68,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
   // USD to SDG factor
   const usdConversionEnabled = Boolean(getSetting("usd_conversion_enabled", true));
   const hideExpiryDate = Boolean(getSetting("hide_expiry_date", false));
+  const showPackageSearch = Boolean(getSetting("pos_show_package_search", false));
   const usdFactor = getSetting("usd_to_sdg_factor", 1) as number;
   const [localFactor, setLocalFactor] = React.useState(String(usdFactor));
   const [factorPopoverOpen, setFactorPopoverOpen] = React.useState(false);
@@ -236,59 +234,47 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
 
         {/* Page-specific actions */}
         <div className="flex flex-1 items-center gap-2">
-          {isPosPage && (
-            <Button
-              size="sm"
-              className="gap-1.5"
-              onClick={() => window.dispatchEvent(new CustomEvent("open-top-selling-dialog"))}
-            >
-              <TrendingUp className="size-4" />
-              الأكثر مبيعاً
-            </Button>
-          )}
-
           {isPosPage && !hideExpiryDate && (
             <>
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-9 text-amber-600 hover:bg-amber-500/10 dark:text-amber-400"
-                  aria-label="منتجات قاربت على الانتهاء"
-                  onClick={() =>
-                    window.dispatchEvent(new CustomEvent("open-near-expiring-dialog"))
-                  }
-                >
-                  <FileWarning className="size-[18px]" />
-                </Button>
-                {expiryCounts.nearExpiringCount > 0 && (
-                  <span className="absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-semibold text-white">
-                    {expiryCounts.nearExpiringCount}
-                  </span>
-                )}
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="منتجات قاربت على الانتهاء"
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent("open-near-expiring-dialog"))
+                    }
+                    className="relative flex size-6 items-center justify-center rounded-full bg-amber-500 text-white shadow-sm transition-transform hover:scale-110"
+                  >
+                    {expiryCounts.nearExpiringCount > 0 && (
+                      <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-600 px-1 text-[10px] font-semibold text-white ring-2 ring-background">
+                        {expiryCounts.nearExpiringCount}
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>منتجات قاربت على الانتهاء</TooltipContent>
+              </Tooltip>
 
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className={cn(
-                    "size-9",
-                    expiryCounts.expiredCount === 0
-                      ? "text-blue-500 hover:bg-blue-500/10"
-                      : "text-destructive hover:bg-destructive/10"
-                  )}
-                  aria-label="منتجات منتهية الصلاحية"
-                  onClick={() => window.dispatchEvent(new CustomEvent("open-expired-dialog"))}
-                >
-                  <AlertTriangle className="size-[18px]" />
-                </Button>
-                {expiryCounts.expiredCount > 0 && (
-                  <span className="absolute -end-1 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-destructive px-1 text-[10px] font-semibold text-white">
-                    {expiryCounts.expiredCount}
-                  </span>
-                )}
-              </div>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="منتجات منتهية الصلاحية"
+                    onClick={() =>
+                      window.dispatchEvent(new CustomEvent("open-expired-dialog"))
+                    }
+                    className="relative flex size-6 items-center justify-center rounded-full bg-destructive text-white shadow-sm transition-transform hover:scale-110"
+                  >
+                    {expiryCounts.expiredCount > 0 && (
+                      <span className="absolute -end-1.5 -top-1.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-700 px-1 text-[10px] font-semibold text-white ring-2 ring-background">
+                        {expiryCounts.expiredCount}
+                      </span>
+                    )}
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>منتجات منتهية الصلاحية</TooltipContent>
+              </Tooltip>
             </>
           )}
         </div>
@@ -313,7 +299,7 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
           )}
 
           {/* Package search */}
-          {isPosPage && (
+          {isPosPage && showPackageSearch && (
             <Popover open={packagePopoverOpen} onOpenChange={setPackagePopoverOpen}>
               <PopoverAnchor asChild>
                 <div className="relative w-80">
@@ -451,37 +437,6 @@ const TopAppBar: React.FC<TopAppBarProps> = ({ onDrawerToggle, isSidebarCollapse
             </TooltipTrigger>
             <TooltipContent>{`pharmacies/${firebaseCollectionName}/shifts`}</TooltipContent>
           </Tooltip>
-
-          {/* Warehouse */}
-          {user && (
-            user.warehouse ? (
-              <Badge
-                variant="secondary"
-                className="h-7 cursor-pointer gap-1 bg-primary/10 text-primary hover:bg-primary/20"
-                onClick={() =>
-                  user.warehouse && navigate(`/admin/warehouses/${user.warehouse.id}/products`)
-                }
-              >
-                <Warehouse className="size-3.5" />
-                {user.warehouse.name}
-              </Badge>
-            ) : (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge
-                    variant="destructive"
-                    className="h-7 animate-pulse gap-1"
-                  >
-                    <AlertTriangle className="size-3.5" />
-                    لا يوجد مستودع
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  لم يتم تعيين مستودع لهذا المستخدم. لن تتمكن من إتمام عمليات البيع حتى يقوم المسؤول بتعيين مستودع.
-                </TooltipContent>
-              </Tooltip>
-            )
-          )}
 
           {/* Due reminders */}
           <Tooltip>

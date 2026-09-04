@@ -6,69 +6,67 @@ import { format, startOfMonth, startOfWeek, subDays } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner";
+import dayjs from "dayjs";
 import {
-  AlertCircle,
+  App as AntApp,
+  Alert,
+  Button,
+  Card,
+  Checkbox,
+  ConfigProvider,
+  DatePicker,
+  Empty,
+  Flex,
+  Input,
+  Popover,
+  Select,
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+  theme as antdTheme,
+} from "antd";
+import type { TableProps } from "antd";
+import arEG from "antd/locale/ar_EG";
+import enUS from "antd/locale/en_US";
+import {
   CheckCircle2,
+  Columns3,
+  Eye,
+  FileSpreadsheet,
   Filter,
-  FileDown,
   Landmark,
   Loader2,
   Plus,
-  Receipt,
   RefreshCw,
   Search,
-  SlidersHorizontal,
   User,
-  X,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableFooter,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationEllipsis,
-  PaginationItem,
-  PaginationLink,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import { DatePickerWithRange } from "@/components/ui/date-range-picker";
-import { cn } from "@/lib/utils";
-import { getPageNumbers } from "@/lib/pagination";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
 import { useSettings } from "@/context/SettingsContext";
 import { useAuthorization } from "@/hooks/useAuthorization";
 import { useLanguage } from "@/context/LanguageContext";
+import { useTheme } from "@/context/ThemeContext";
+import { useShifts } from "@/hooks/useShifts";
 import { webUrl } from "@/constants";
+import apiClient from "@/lib/axios";
 
 import saleService, { Sale } from "@/services/saleService";
-import { PaginatedResponse } from "@/services/clientService";
-import { getSaleStatus, translateSaleStatus } from "@/lib/saleStatus";
+import clientService, { PaginatedResponse } from "@/services/clientService";
+import { getSaleStatus, translateSaleStatus, type SaleStatusInfo } from "@/lib/saleStatus";
 import { SaleDetailsDrawer } from "@/components/sales/SaleDetailsDrawer";
-import {
-  SalesAdvancedFiltersSheet,
-  SalesAdvancedFilterValues,
-} from "@/components/sales/SalesAdvancedFiltersSheet";
+
+interface SalesAdvancedFilterValues {
+  clientId: string;
+  clientName: string;
+  userId: string;
+  shiftId: string;
+}
+
+const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
 
 const PER_PAGE_OPTIONS = [25, 50, 100];
 
@@ -82,6 +80,46 @@ const DATE_PRESET_KEYS: Record<DatePreset, string> = {
   custom: "datePresetCustom",
   all: "datePresetAll",
 };
+
+const STATUS_TAG_COLOR: Record<SaleStatusInfo["variant"], string> = {
+  success: "green",
+  warning: "orange",
+  destructive: "red",
+  secondary: "default",
+  outline: "blue",
+};
+
+// Column visibility (persisted in localStorage, same UX as the products page).
+const COLUMN_KEYS = [
+  "id",
+  "date",
+  "client",
+  "cashier",
+  "total",
+  "cost",
+  "paid",
+  "returned",
+  "status",
+  "finance",
+] as const;
+type ColumnKey = (typeof COLUMN_KEYS)[number];
+const COLUMN_LABEL_KEYS: Record<ColumnKey, string> = {
+  id: "invoiceColumn",
+  date: "date",
+  client: "client",
+  cashier: "cashierColumn",
+  total: "totalColumn",
+  cost: "costColumn",
+  paid: "paidColumn",
+  returned: "returnedColumn",
+  status: "status",
+  finance: "financeColumn",
+};
+const COLUMNS_STORAGE_KEY = "sales_table_columns";
+const DEFAULT_COLUMN_VISIBILITY = COLUMN_KEYS.reduce(
+  (acc, key) => ({ ...acc, [key]: true }),
+  {} as Record<ColumnKey, boolean>,
+);
 
 function fmt(d: Date) {
   return format(d, "yyyy-MM-dd");
@@ -118,7 +156,8 @@ const SalesListPage: React.FC = () => {
   const formatCurrency = useFormatCurrency();
   const { getSetting } = useSettings();
   const { hasPermission } = useAuthorization();
-  const { direction } = useLanguage();
+  const { direction, language } = useLanguage();
+  const { resolvedTheme } = useTheme();
   const { t } = useTranslation("sales");
   const { t: tCommon } = useTranslation("common");
   const posMode = (getSetting("pos_mode", "shift") as "shift" | "days") ?? "shift";
@@ -140,15 +179,42 @@ const SalesListPage: React.FC = () => {
   });
   const [page, setPage] = useState(Number(searchParams.get("page") || "1"));
   const [perPage, setPerPage] = useState(25);
-  const [advancedOpen, setAdvancedOpen] = useState(false);
+
+  const [clientSearch, setClientSearch] = useState("");
+  const [debouncedClientSearch, setDebouncedClientSearch] = useState("");
 
   const [selectedSaleId, setSelectedSaleId] = useState<number | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
 
+  const [visibleColumns, setVisibleColumns] = useState<Record<ColumnKey, boolean>>(() => {
+    try {
+      const saved = localStorage.getItem(COLUMNS_STORAGE_KEY);
+      return saved ? { ...DEFAULT_COLUMN_VISIBILITY, ...JSON.parse(saved) } : DEFAULT_COLUMN_VISIBILITY;
+    } catch {
+      return DEFAULT_COLUMN_VISIBILITY;
+    }
+  });
+  const toggleColumn = (key: ColumnKey) => {
+    setVisibleColumns((prev) => {
+      const next = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem(COLUMNS_STORAGE_KEY, JSON.stringify(next));
+      } catch {
+        /* ignore persistence failures */
+      }
+      return next;
+    });
+  };
+
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(timer);
   }, [searchTerm]);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setDebouncedClientSearch(clientSearch.trim()), 300);
+    return () => clearTimeout(timer);
+  }, [clientSearch]);
 
   useEffect(() => {
     setPage(1);
@@ -197,7 +263,35 @@ const SalesListPage: React.FC = () => {
   });
 
   const sales = salesQuery.data?.data ?? [];
-  const isInitialLoading = salesQuery.isLoading;
+
+  // Inline advanced-filter option sources.
+  const usersQuery = useQuery({
+    queryKey: ["users-list-filters"],
+    queryFn: async () => {
+      const res = await apiClient.get<{ data: { id: number; name: string }[] }>("/users/list");
+      return res.data?.data ?? [];
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+  const shiftsQuery = useShifts();
+  const clientResultsQuery = useQuery({
+    queryKey: ["sales-filter-clients", debouncedClientSearch],
+    queryFn: () => clientService.autocompleteClients(debouncedClientSearch, 20),
+    enabled: debouncedClientSearch.length > 0,
+    placeholderData: keepPreviousData,
+  });
+
+  const clientOptions = useMemo(() => {
+    const opts = (clientResultsQuery.data ?? []).map((c) => ({ value: String(c.id), label: c.name }));
+    // Keep the current selection visible even when it isn't in the latest search results.
+    if (advanced.clientId && !opts.some((o) => o.value === advanced.clientId)) {
+      opts.unshift({
+        value: advanced.clientId,
+        label: advanced.clientName || t("clientHash", { id: advanced.clientId }),
+      });
+    }
+    return opts;
+  }, [clientResultsQuery.data, advanced.clientId, advanced.clientName, t]);
 
   // After each fetch, re-check the visible page's "exported to finance" sales against
   // Firestore — if an entry was deleted on finance-api's side, clear finance_exported_at
@@ -233,9 +327,9 @@ const SalesListPage: React.FC = () => {
       // Background reconciliation only — a failed check just leaves stale state for next fetch.
     });
   }, [sales, page, perPage, filterQs, queryClient]);
+
   const hasActiveFilters =
     debouncedSearch !== "" || datePreset !== "today" || !!advanced.clientId || !!advanced.userId || !!advanced.shiftId;
-  const isEmpty = !isInitialLoading && !salesQuery.isError && sales.length === 0;
 
   const refetchAll = () => {
     salesQuery.refetch();
@@ -254,387 +348,477 @@ const SalesListPage: React.FC = () => {
     setDrawerOpen(true);
   };
 
-  const handleExport = () => {
+  const buildExportParams = () => {
     const params = new URLSearchParams();
     if (dateRange.start) params.append("start_date", dateRange.start);
     if (dateRange.end) params.append("end_date", dateRange.end);
     if (advanced.clientId) params.append("client_id", advanced.clientId);
     if (advanced.userId) params.append("user_id", advanced.userId);
     if (advanced.shiftId) params.append("shift_id", advanced.shiftId);
-    window.open(`${webUrl}/reports/sales-pdf?${params.toString()}`, "_blank");
+    if (debouncedSearch) params.append("search", debouncedSearch);
+    return params;
   };
 
-  return (
-    <div dir={direction} className="min-h-screen bg-background">
-      <div className="mx-auto max-w-7xl px-4 py-6 md:px-8 md:py-10">
-        {/* Header */}
-        <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b pb-5">
-          <div>
-            <h1 className="text-xl font-semibold tracking-tight text-foreground">{t("pageTitle")}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">{t("pageSubtitle")}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="icon" onClick={refetchAll} title={tCommon("refresh")}>
-              <RefreshCw className={cn("size-4", salesQuery.isFetching && "animate-spin")} />
-            </Button>
-            <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5">
-              <FileDown className="size-4" />
-              {t("export")}
-            </Button>
+  const handleExport = () => {
+    window.open(`${webUrl}/reports/sales/pdf?${buildExportParams().toString()}`, "_blank");
+  };
+
+  const handleExportExcel = () => {
+    window.open(`${webUrl}/reports/sales/excel?${buildExportParams().toString()}`, "_blank");
+  };
+
+  const locale = language === "ar" ? "ar" : "en-US";
+
+  const columns: TableProps<Sale>["columns"] = [
+    {
+      title: t("invoiceColumn"),
+      dataIndex: "id",
+      key: "id",
+      width: 90,
+      render: (id: number) => (
+        <Button
+          type="link"
+          size="small"
+          style={{ padding: 0, fontWeight: 600 }}
+          onClick={(e) => {
+            e.stopPropagation();
+            openSale(id);
+          }}
+        >
+          #{id}
+        </Button>
+      ),
+    },
+    {
+      title: t("date"),
+      dataIndex: "sale_date",
+      key: "date",
+      width: 170,
+      render: (_v, sale) => (
+        <Space direction="vertical" size={0}>
+          <Text style={{ fontWeight: 500 }}>
+            {new Date(sale.sale_date).toLocaleDateString(locale, {
+              day: "2-digit",
+              month: "short",
+              year: "numeric",
+            })}
+          </Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {t("createdAtLabel")}:{" "}
+            {new Date(sale.created_at).toLocaleString(locale, {
+              day: "2-digit",
+              month: "short",
+              hour: "2-digit",
+              minute: "2-digit",
+            })}
+          </Text>
+        </Space>
+      ),
+    },
+    {
+      title: t("client"),
+      dataIndex: "client_name",
+      key: "client",
+      render: (_v, sale) =>
+        sale.client_id ? (
+          <Space size={4}>
+            <User size={14} style={{ opacity: 0.5 }} />
+            <Text style={{ fontWeight: 500 }}>
+              {sale.client_name ?? t("clientHash", { id: sale.client_id })}
+            </Text>
+          </Space>
+        ) : (
+          <Text type="secondary">{t("cashClient")}</Text>
+        ),
+    },
+       {
+      title: t("cashierColumn"),
+      dataIndex: "user_name",
+      key: "cashier",
+      width: 130,
+      render: (name: string | null) => <Text type="secondary">{name ?? "—"}</Text>,
+    },
+    {
+      title: t("totalColumn"),
+      dataIndex: "total_amount",
+      key: "total",
+      align: "right",
+      width: 120,
+      render: (v) => <Text strong>{formatCurrency(Number(v ?? 0))}</Text>,
+    },
+    {
+      title: t("costColumn"),
+      dataIndex: "total_cost",
+      key: "cost",
+      align: "right",
+      width: 120,
+      render: (v) => <Text type="secondary">{formatCurrency(Number(v ?? 0))}</Text>,
+    },
+    {
+      title: t("paidColumn"),
+      dataIndex: "paid_amount",
+      key: "paid",
+      align: "right",
+      width: 120,
+      render: (v) => (
+        <span style={{ color: "#16a34a" }}>{formatCurrency(Number(v ?? 0))}</span>
+      ),
+    },
+    {
+      title: t("returnedColumn"),
+      dataIndex: "total_returned_amount",
+      key: "returned",
+      align: "right",
+      width: 120,
+      render: (v) => {
+        const amount = Number(v ?? 0);
+        return amount > 0 ? (
+          <span style={{ color: "#dc2626" }}>{formatCurrency(amount)}</span>
+        ) : (
+          <Text type="secondary">—</Text>
+        );
+      },
+    },
+    {
+      title: t("status"),
+      key: "status",
+      width: 120,
+      render: (_v, sale) => {
+        const status = getSaleStatus(sale);
+        return <Tag color={STATUS_TAG_COLOR[status.variant]}>{translateSaleStatus(t, status.kind)}</Tag>;
+      },
+    },
+ 
+    {
+      title: t("financeColumn"),
+      key: "finance",
+      align: "center",
+      width: 90,
+      render: (_v, sale) => <FinanceExportButton sale={sale} />,
+    },
+  ];
+
+  const displayedColumns = (columns ?? []).filter(
+    (c) => visibleColumns[c.key as ColumnKey] ?? true,
+  );
+
+  const columnToggleContent = (
+    <Space direction="vertical" size={4} style={{ minWidth: 180 }}>
+      <Text strong>{t("visibleColumnsTitle")}</Text>
+      {COLUMN_KEYS.map((key) => (
+        <Checkbox
+          key={key}
+          checked={visibleColumns[key] ?? true}
+          disabled={key === "id"}
+          onChange={() => toggleColumn(key)}
+        >
+          {t(COLUMN_LABEL_KEYS[key])}
+        </Checkbox>
+      ))}
+    </Space>
+  );
+
+  const emptyNode = (
+    <Empty
+      image={Empty.PRESENTED_IMAGE_SIMPLE}
+      description={
+        <Space direction="vertical" size={8}>
+          <Text style={{ fontWeight: 500 }}>{t("emptyTitle")}</Text>
+          <Text type="secondary">
+            {hasActiveFilters ? t("emptyDescriptionFiltered") : t("emptyDescriptionNoFilter")}
+          </Text>
+          <Space wrap>
+            {hasActiveFilters && (
+              <Button size="small" onClick={clearFilters}>
+                {t("clearFiltersButton")}
+              </Button>
+            )}
+            {datePreset !== "all" && (
+              <Button size="small" onClick={() => setDatePreset("all")}>
+                {t("showAllDates")}
+              </Button>
+            )}
             {canCreateSale && (
-              <Button size="sm" onClick={() => navigate("/sales/pos")} className="gap-1.5">
-                <Plus className="size-4" />
+              <Button size="small" type="primary" icon={<Plus size={14} />} onClick={() => navigate("/sales/pos")}>
                 {t("newSale")}
               </Button>
             )}
-          </div>
-        </div>
+          </Space>
+        </Space>
+      }
+    />
+  );
 
-        {/* Toolbar */}
-        <div className="mb-3 flex flex-wrap items-center gap-2">
-          <div className="relative min-w-[220px] flex-1 sm:max-w-sm">
-            <Search className="pointer-events-none absolute start-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder={t("searchPlaceholder")}
-              className="ps-9"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className="absolute end-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                aria-label={t("clearSearch")}
-              >
-                <X className="size-4" />
-              </button>
-            )}
-          </div>
-
-          <Select value={datePreset} onValueChange={(v) => setDatePreset(v as DatePreset)}>
-            <SelectTrigger className="w-40">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {(Object.keys(DATE_PRESET_KEYS) as DatePreset[]).map((p) => (
-                <SelectItem key={p} value={p}>
-                  {t(DATE_PRESET_KEYS[p])}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-
-          {datePreset === "custom" && (
-            <DatePickerWithRange date={customRange} onDateChange={setCustomRange} buttonSize="default" />
-          )}
-
-          <Button variant="outline" size="sm" onClick={() => setAdvancedOpen(true)} className="gap-1.5">
-            <SlidersHorizontal className="size-4" />
-            {t("advancedFilters")}
-          </Button>
-
-          {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={clearFilters} className="gap-1.5 text-muted-foreground">
-              <Filter className="size-3.5" />
-              {t("clearFiltersButton")}
-            </Button>
-          )}
-
-          {!isInitialLoading && !salesQuery.isError && (
-            <p className="ms-auto text-xs text-muted-foreground">
-              {t("salesCount", { count: salesQuery.data?.total ?? sales.length })}
-            </p>
-          )}
-        </div>
-
-        {/* Active filter chips */}
-        {(datePreset !== "today" || advanced.clientId || advanced.userId || advanced.shiftId) && (
-          <div className="mb-4 flex flex-wrap items-center gap-1.5">
-            {datePreset !== "today" && (
-              <Badge variant="secondary" className="gap-1.5">
-                {t(DATE_PRESET_KEYS[datePreset])}
-                <button type="button" onClick={() => setDatePreset("today")} className="hover:text-destructive">
-                  <X className="size-3" />
-                </button>
-              </Badge>
-            )}
-            {advanced.clientId && (
-              <Badge variant="secondary" className="gap-1.5">
-                <User className="size-3" />
-                {advanced.clientName || t("clientHash", { id: advanced.clientId })}
-                <button
-                  type="button"
-                  onClick={() => setAdvanced((p) => ({ ...p, clientId: "", clientName: "" }))}
-                  className="hover:text-destructive"
-                >
-                  <X className="size-3" />
-                </button>
-              </Badge>
-            )}
-            {advanced.userId && (
-              <Badge variant="secondary" className="gap-1.5">
-                {t("selectedCashierFilter")}
-                <button
-                  type="button"
-                  onClick={() => setAdvanced((p) => ({ ...p, userId: "" }))}
-                  className="hover:text-destructive"
-                >
-                  <X className="size-3" />
-                </button>
-              </Badge>
-            )}
-            {advanced.shiftId && (
-              <Badge variant="secondary" className="gap-1.5">
-                {t("shiftHashFilter", { id: advanced.shiftId })}
-                <button
-                  type="button"
-                  onClick={() => setAdvanced((p) => ({ ...p, shiftId: "" }))}
-                  className="hover:text-destructive"
-                >
-                  <X className="size-3" />
-                </button>
-              </Badge>
-            )}
-          </div>
-        )}
-
-        {/* Error */}
-        {salesQuery.isError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertCircle className="size-4" />
-            <AlertTitle>{t("loadErrorTitle")}</AlertTitle>
-            <AlertDescription className="flex items-center justify-between gap-3">
-              <span>{t("loadErrorDescription")}</span>
-              <Button size="sm" variant="outline" onClick={refetchAll}>
-                {tCommon("retry")}
-              </Button>
-            </AlertDescription>
-          </Alert>
-        )}
-
-        {/* Loading skeleton */}
-        {isInitialLoading && (
-          <div className="space-y-2 rounded-xl border p-4">
-            {Array.from({ length: 8 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-4 py-2">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-32" />
-                <Skeleton className="h-4 w-28" />
-                <Skeleton className="h-4 w-16" />
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-5 w-20 rounded-full" />
-                <Skeleton className="ml-auto h-8 w-8 rounded-md" />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Empty state */}
-        {isEmpty && (
-          <div className="flex flex-col items-center justify-center gap-3 rounded-xl border border-dashed py-16 text-center">
-            <Receipt className="size-10 text-muted-foreground" />
+  return (
+    <ConfigProvider
+      direction={direction}
+      locale={language === "ar" ? arEG : enUS}
+      theme={{
+        algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
+      }}
+    >
+      <AntApp>
+        <div dir={direction} style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Header */}
+          <Flex align="flex-start" justify="space-between" gap={16} wrap>
             <div>
-              <p className="font-medium text-foreground">{t("emptyTitle")}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {hasActiveFilters
-                  ? t("emptyDescriptionFiltered")
-                  : t("emptyDescriptionNoFilter")}
-              </p>
+              <Title level={4} style={{ margin: 0 }}>
+                {t("pageTitle")}
+              </Title>
+              <Text type="secondary">{t("pageSubtitle")}</Text>
             </div>
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              {hasActiveFilters && (
-                <Button variant="outline" size="sm" onClick={clearFilters}>
-                  {t("clearFiltersButton")}
-                </Button>
-              )}
-              {datePreset !== "all" && (
-                <Button variant="outline" size="sm" onClick={() => setDatePreset("all")}>
-                  {t("showAllDates")}
-                </Button>
-              )}
+            <Space wrap>
+              <Tooltip title={tCommon("refresh")}>
+                <Button
+                  icon={<RefreshCw size={16} className={salesQuery.isFetching ? "animate-spin" : ""} />}
+                  onClick={refetchAll}
+                />
+              </Tooltip>
+              <Popover
+                trigger="click"
+                placement="bottomRight"
+                content={columnToggleContent}
+              >
+                <Tooltip title={t("toggleColumnsTooltip")}>
+                  <Button icon={<Columns3 size={16} />}>{t("columnsLabel")}</Button>
+                </Tooltip>
+              </Popover>
+              <Button icon={<Eye size={16} />} onClick={handleExport}>
+                {t("export")}
+              </Button>
+              <Button icon={<FileSpreadsheet size={16} />} onClick={handleExportExcel}>
+                {t("exportExcel")}
+              </Button>
               {canCreateSale && (
-                <Button size="sm" onClick={() => navigate("/sales/pos")} className="gap-1.5">
-                  <Plus className="size-4" />
+                <Button type="primary" icon={<Plus size={16} />} onClick={() => navigate("/sales/pos")}>
                   {t("newSale")}
                 </Button>
               )}
-            </div>
-          </div>
-        )}
+            </Space>
+          </Flex>
 
-        {/* Table */}
-        {!isInitialLoading && !salesQuery.isError && !isEmpty && (
-          <>
-            <div className="overflow-hidden rounded-xl border">
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader className="sticky top-0 z-10 bg-muted/40">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="text-start">{t("invoiceColumn")}</TableHead>
-                      <TableHead className="text-start">{t("date")}</TableHead>
-                      <TableHead className="text-start">{t("client")}</TableHead>
-                      <TableHead className="text-end">{t("totalColumn")}</TableHead>
-                      <TableHead className="text-end">{t("costColumn")}</TableHead>
-                      <TableHead className="text-end">{t("paidColumn")}</TableHead>
-                      <TableHead className="text-start">{t("status")}</TableHead>
-                      <TableHead className="text-start">{t("cashierColumn")}</TableHead>
-                      <TableHead className="text-center">{t("financeColumn")}</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {sales.map((sale) => (
-                      <SaleRow key={sale.id} sale={sale} onOpen={() => openSale(sale.id)} formatCurrency={formatCurrency} />
-                    ))}
-                  </TableBody>
-                  <TableFooter>
-                    <TableRow className="hover:bg-transparent">
-                      <TableCell colSpan={3} className="text-start text-sm font-semibold text-foreground">
-                        {t("totalsRowLabel")}
-                      </TableCell>
-                      <TableCell className="text-end text-sm font-bold tabular-nums text-foreground">
-                        {summaryQuery.isFetching ? (
-                          <Skeleton className="ms-auto h-4 w-16" />
-                        ) : (
-                          formatCurrency(summaryQuery.data?.total_amount ?? 0)
-                        )}
-                      </TableCell>
-                      <TableCell className="text-end text-sm font-bold tabular-nums text-muted-foreground">
-                        {summaryQuery.isFetching ? (
-                          <Skeleton className="ms-auto h-4 w-16" />
-                        ) : (
-                          formatCurrency(summaryQuery.data?.total_cost ?? 0)
-                        )}
-                      </TableCell>
-                      <TableCell className="text-end text-sm font-bold tabular-nums text-green-600 dark:text-green-400">
-                        {summaryQuery.isFetching ? (
-                          <Skeleton className="ms-auto h-4 w-16" />
-                        ) : (
-                          formatCurrency(summaryQuery.data?.paid_amount ?? 0)
-                        )}
-                      </TableCell>
-                      <TableCell colSpan={3} />
-                    </TableRow>
-                  </TableFooter>
-                </Table>
-              </div>
-            </div>
+          {/* Filters */}
+          <Card size="small">
+            <Flex gap={12} wrap align="center">
+              <Input
+                allowClear
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder={t("searchPlaceholder")}
+                prefix={<Search size={15} style={{ opacity: 0.5 }} />}
+                style={{ width: 260 }}
+              />
 
-            {/* Pagination */}
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <span>
-                  {t("showingRange", {
-                    from: (salesQuery.data?.from ?? 0).toLocaleString("en-US"),
-                    to: (salesQuery.data?.to ?? 0).toLocaleString("en-US"),
-                    total: (salesQuery.data?.total ?? 0).toLocaleString("en-US"),
-                  })}
-                </span>
-                <Select value={String(perPage)} onValueChange={(v) => { setPerPage(Number(v)); setPage(1); }}>
-                  <SelectTrigger className="h-7 w-20 text-xs">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PER_PAGE_OPTIONS.map((n) => (
-                      <SelectItem key={n} value={String(n)}>
-                        {t("perPageSuffix", { count: n })}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              <Select<DatePreset>
+                value={datePreset}
+                style={{ width: 160 }}
+                onChange={(v) => setDatePreset(v)}
+                options={(Object.keys(DATE_PRESET_KEYS) as DatePreset[]).map((p) => ({
+                  value: p,
+                  label: t(DATE_PRESET_KEYS[p]),
+                }))}
+              />
 
-              {salesQuery.data && salesQuery.data.last_page > 1 && (
-                <Pagination className="mx-0 w-auto">
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (page > 1 && !salesQuery.isFetching) setPage((p) => p - 1);
-                        }}
-                        className={page <= 1 || salesQuery.isFetching ? "pointer-events-none opacity-50" : undefined}
-                      />
-                    </PaginationItem>
-                    {getPageNumbers(page, salesQuery.data.last_page).map((p, i) =>
-                      p === "ellipsis" ? (
-                        <PaginationItem key={`e-${i}`}>
-                          <PaginationEllipsis />
-                        </PaginationItem>
-                      ) : (
-                        <PaginationItem key={p}>
-                          <PaginationLink
-                            href="#"
-                            isActive={p === page}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              if (!salesQuery.isFetching) setPage(p);
-                            }}
-                          >
-                            {p}
-                          </PaginationLink>
-                        </PaginationItem>
-                      )
-                    )}
-                    <PaginationItem>
-                      <PaginationNext
-                        href="#"
-                        onClick={(e) => {
-                          e.preventDefault();
-                          if (salesQuery.data && page < salesQuery.data.last_page && !salesQuery.isFetching) {
-                            setPage((p) => p + 1);
-                          }
-                        }}
-                        className={
-                          (salesQuery.data && page >= salesQuery.data.last_page) || salesQuery.isFetching
-                            ? "pointer-events-none opacity-50"
-                            : undefined
-                        }
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
+              {datePreset === "custom" && (
+                <RangePicker
+                  value={
+                    customRange?.from && customRange?.to
+                      ? [dayjs(customRange.from), dayjs(customRange.to)]
+                      : null
+                  }
+                  onChange={(values) =>
+                    setCustomRange(
+                      values?.[0] && values?.[1]
+                        ? { from: values[0].toDate(), to: values[1].toDate() }
+                        : undefined,
+                    )
+                  }
+                />
               )}
-            </div>
-          </>
-        )}
-      </div>
 
-      <SaleDetailsDrawer
-        saleId={selectedSaleId}
-        open={drawerOpen}
-        onOpenChange={setDrawerOpen}
-        onChanged={refetchAll}
-      />
+              <Select
+                showSearch
+                allowClear
+                placeholder={t("client")}
+                style={{ width: 200 }}
+                value={advanced.clientId || undefined}
+                filterOption={false}
+                notFoundContent={
+                  clientResultsQuery.isFetching
+                    ? t("searching")
+                    : debouncedClientSearch
+                      ? t("noMatchingClients")
+                      : t("typeToSearchClient")
+                }
+                onSearch={setClientSearch}
+                onChange={(value, option) =>
+                  setAdvanced((p) => ({
+                    ...p,
+                    clientId: value ?? "",
+                    clientName: value ? (option as { label: string })?.label ?? "" : "",
+                  }))
+                }
+                options={clientOptions}
+              />
 
-      <SalesAdvancedFiltersSheet
-        open={advancedOpen}
-        onOpenChange={setAdvancedOpen}
-        posMode={posMode}
-        values={advanced}
-        onApply={setAdvanced}
-      />
-    </div>
+              <Select
+                allowClear
+                showSearch
+                optionFilterProp="label"
+                placeholder={t("allCashiers")}
+                style={{ width: 170 }}
+                loading={usersQuery.isLoading}
+                value={advanced.userId || undefined}
+                onChange={(value) => setAdvanced((p) => ({ ...p, userId: value ?? "" }))}
+                options={(usersQuery.data ?? []).map((u) => ({ value: String(u.id), label: u.name }))}
+              />
+
+              {posMode === "shift" && (
+                <Select
+                  allowClear
+                  placeholder={t("allShifts")}
+                  style={{ width: 280 }}
+                  loading={shiftsQuery.isLoading}
+                  value={advanced.shiftId || undefined}
+                  onChange={(value) => setAdvanced((p) => ({ ...p, shiftId: value ?? "" }))}
+                  options={(shiftsQuery.data ?? []).map((s) => ({
+                    value: String(s.id),
+                    label:
+                      (s.name ? s.name : t("shiftHashFilter", { id: s.id })) +
+                      (s.shift_date ? ` (${s.shift_date})` : ""),
+                  }))}
+                />
+              )}
+
+              {hasActiveFilters && (
+                <Button type="text" icon={<Filter size={14} />} onClick={clearFilters}>
+                  {t("clearFiltersButton")}
+                </Button>
+              )}
+
+              <div style={{ flex: 1 }} />
+
+              {!salesQuery.isError && (
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {t("salesCount", { count: salesQuery.data?.total ?? sales.length })}
+                </Text>
+              )}
+            </Flex>
+          </Card>
+
+          {/* Error */}
+          {salesQuery.isError && (
+            <Alert
+              type="error"
+              showIcon
+              message={t("loadErrorTitle")}
+              description={t("loadErrorDescription")}
+              action={
+                <Button size="small" onClick={refetchAll}>
+                  {tCommon("retry")}
+                </Button>
+              }
+            />
+          )}
+
+          {/* Table */}
+          {!salesQuery.isError && (
+            <Card size="small" styles={{ body: { padding: 0 } }}>
+              <Table<Sale>
+                rowKey="id"
+                size="small"
+                columns={displayedColumns}
+                dataSource={sales}
+                loading={salesQuery.isLoading}
+                scroll={{ x: 1100 }}
+                locale={{ emptyText: emptyNode }}
+                onRow={(sale) => ({ onClick: () => openSale(sale.id), style: { cursor: "pointer" } })}
+                pagination={{
+                  current: page,
+                  pageSize: perPage,
+                  total: salesQuery.data?.total ?? sales.length,
+                  showSizeChanger: true,
+                  pageSizeOptions: PER_PAGE_OPTIONS,
+                  showTotal: (total, range) =>
+                    t("showingRange", {
+                      from: range[0].toLocaleString("en-US"),
+                      to: range[1].toLocaleString("en-US"),
+                      total: total.toLocaleString("en-US"),
+                    }),
+                }}
+                onChange={(pagination) => {
+                  if (pagination.pageSize && pagination.pageSize !== perPage) {
+                    setPerPage(pagination.pageSize);
+                    setPage(1);
+                  } else if (pagination.current) {
+                    setPage(pagination.current);
+                  }
+                }}
+                summary={() =>
+                  sales.length === 0 ? null : (
+                    <Table.Summary fixed>
+                      <Table.Summary.Row>
+                        {displayedColumns.map((col, i) => {
+                          const key = col.key as ColumnKey;
+                          let content: React.ReactNode = null;
+                          if (i === 0) {
+                            content = <Text strong>{t("totalsRowLabel")}</Text>;
+                          } else if (key === "total") {
+                            content = (
+                              <Text strong>{formatCurrency(summaryQuery.data?.total_amount ?? 0)}</Text>
+                            );
+                          } else if (key === "cost") {
+                            content = (
+                              <Text type="secondary" strong>
+                                {formatCurrency(summaryQuery.data?.total_cost ?? 0)}
+                              </Text>
+                            );
+                          } else if (key === "paid") {
+                            content = (
+                              <span style={{ color: "#16a34a", fontWeight: 700 }}>
+                                {formatCurrency(summaryQuery.data?.paid_amount ?? 0)}
+                              </span>
+                            );
+                          } else if (key === "returned") {
+                            content = (
+                              <span style={{ color: "#dc2626", fontWeight: 700 }}>
+                                {formatCurrency(summaryQuery.data?.returned_amount ?? 0)}
+                              </span>
+                            );
+                          }
+                          return (
+                            <Table.Summary.Cell
+                              key={key}
+                              index={i}
+                              align={(col.align as "left" | "right" | "center") ?? "left"}
+                            >
+                              {content}
+                            </Table.Summary.Cell>
+                          );
+                        })}
+                      </Table.Summary.Row>
+                    </Table.Summary>
+                  )
+                }
+              />
+            </Card>
+          )}
+        </div>
+
+        <SaleDetailsDrawer
+          saleId={selectedSaleId}
+          open={drawerOpen}
+          onOpenChange={setDrawerOpen}
+          onChanged={refetchAll}
+        />
+      </AntApp>
+    </ConfigProvider>
   );
 };
 
-function SaleRow({
-  sale,
-  onOpen,
-  formatCurrency,
-}: {
-  sale: Sale;
-  onOpen: () => void;
-  formatCurrency: (v: string | number | null | undefined) => string;
-}) {
+function FinanceExportButton({ sale }: { sale: Sale }) {
   const { t } = useTranslation("sales");
-  const { direction } = useLanguage();
   const queryClient = useQueryClient();
-  const status = getSaleStatus(sale);
-  const total = Number(sale.total_amount ?? 0);
-  const cost = Number(sale.total_cost ?? 0);
-  const paid = Number(sale.paid_amount ?? 0);
   const [isExporting, setIsExporting] = useState(false);
   const isExported = !!sale.finance_exported_at;
 
@@ -654,82 +838,23 @@ function SaleRow({
   };
 
   return (
-    <TableRow className="cursor-pointer hover:bg-muted/40" onClick={onOpen}>
-      <TableCell className="py-3">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onOpen();
-          }}
-          className="font-semibold text-primary hover:underline"
-        >
-          #{sale.id}
-        </button>
-      </TableCell>
-      <TableCell className="text-sm">
-        <div className="font-medium text-foreground">
-          {new Date(sale.sale_date).toLocaleDateString(direction === "rtl" ? "ar" : "en-US", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          })}
-        </div>
-        <div className="text-xs text-muted-foreground">
-          {t("createdAtLabel")}: {new Date(sale.created_at).toLocaleString(direction === "rtl" ? "ar" : "en-US", {
-            day: "2-digit",
-            month: "short",
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </div>
-      </TableCell>
-      <TableCell>
-        {sale.client_id ? (
-          <span className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground">
-            <User className="size-3.5 text-muted-foreground" />
-            {sale.client_name ?? t("clientHash", { id: sale.client_id })}
-          </span>
-        ) : (
-          <span className="text-sm text-muted-foreground">{t("cashClient")}</span>
-        )}
-      </TableCell>
-      <TableCell className="text-end text-sm font-bold tabular-nums text-foreground">
-        {formatCurrency(total)}
-      </TableCell>
-      <TableCell className="text-end text-sm tabular-nums text-muted-foreground">
-        {formatCurrency(cost)}
-      </TableCell>
-      <TableCell className="text-end text-sm tabular-nums text-green-600 dark:text-green-400">
-        {formatCurrency(paid)}
-      </TableCell>
-      <TableCell>
-        <Badge variant={status.variant}>{translateSaleStatus(t, status.kind)}</Badge>
-      </TableCell>
-      <TableCell className="text-sm text-muted-foreground">{sale.user_name ?? "—"}</TableCell>
-      <TableCell className="text-center">
-        <button
-          type="button"
-          onClick={handleExportToFinance}
-          disabled={isExporting || isExported}
-          title={isExported ? t("exportedTooltip") : t("exportFinance")}
-          className={cn(
-            "inline-flex size-7 items-center justify-center rounded-md border transition-colors disabled:cursor-not-allowed",
-            isExported
-              ? "border-emerald-200 bg-emerald-50 text-emerald-600 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-400"
-              : "border-border text-muted-foreground hover:bg-accent disabled:opacity-60"
-          )}
-        >
-          {isExporting ? (
-            <Loader2 className="size-3.5 animate-spin" />
+    <Tooltip title={isExported ? t("exportedTooltip") : t("exportFinance")}>
+      <Button
+        size="small"
+        type={isExported ? "default" : "text"}
+        disabled={isExporting || isExported}
+        onClick={handleExportToFinance}
+        icon={
+          isExporting ? (
+            <Loader2 size={15} className="animate-spin" />
           ) : isExported ? (
-            <CheckCircle2 className="size-3.5" />
+            <CheckCircle2 size={15} style={{ color: "#059669" }} />
           ) : (
-            <Landmark className="size-3.5" />
-          )}
-        </button>
-      </TableCell>
-    </TableRow>
+            <Landmark size={15} />
+          )
+        }
+      />
+    </Tooltip>
   );
 }
 

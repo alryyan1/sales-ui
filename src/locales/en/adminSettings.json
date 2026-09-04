@@ -95,6 +95,8 @@
     "showOutOfStockDescription": "When enabled, products with zero or negative stock will appear in POS search results.",
     "showExpiryDateColumnLabel": "Show expiry date column in items table",
     "showExpiryDateColumnDescription": "When disabled, the expiry date column is hidden from the sale items table on the gallery page.",
+    "showPackageSearchLabel": "Show package search box",
+    "showPackageSearchDescription": "When disabled, the \"search for a package\" box is hidden from the POS top bar.",
     "paymentMethodsGroupTitle": "Payment Methods",
     "paymentMethodsHelp": "At least one payment method must remain active.",
     "usdGroupTitle": "USD Conversion",

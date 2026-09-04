@@ -101,6 +101,7 @@ export function PosHeaderProductSearch({
                 dir: "ltr",
                 style: { textAlign: "left" },
               },
+              formHelperText: { sx: { color: "warning.main", mx: 0 } },
             }}
             InputProps={{
               ...params.InputProps,
@@ -114,14 +115,14 @@ export function PosHeaderProductSearch({
               ),
             }}
             helperText={
-              inputValue.length > 0
+              inputValue.trim() && !loading && options.length === 0
                 ? (() => {
                   const showExpired = getSetting("pos_show_expired_products", false);
                   const showOutOfStock = getSetting("pos_show_out_of_stock_products", false);
                   if (!showExpired && !showOutOfStock) return t("hiddenExpiredAndOutOfStockHelper");
                   if (!showExpired) return t("hiddenExpiredHelper");
                   if (!showOutOfStock) return t("hiddenOutOfStockHelper");
-                  return undefined;
+                  return t("noResultsText");
                 })()
                 : undefined
             }

@@ -6,6 +6,7 @@ import { useLanguage } from "@/context/LanguageContext";
 import { Loader2 } from "lucide-react";
 import { Toaster } from "sonner";
 import { useAuth } from "@/context/AuthContext";
+import { useIdleLogout, IDLE_LOGOUT_FLAG } from "@/hooks/useIdleLogout";
 import { PosFilterProvider } from "@/context/PosFilterContext";
 import SidebarPro from "./SidebarPro";
 import TopAppBar from "./TopAppBar";
@@ -19,13 +20,19 @@ const COLLAPSED_DRAWER_WIDTH = 72;
 const FULL_BLEED_ROUTES = ["/sales/pos"];
 
 const RootLayout: React.FC = () => {
-  const { isLoading, user, roles, permissions } = useAuth();
+  const { isLoading, user, roles, permissions, handleLogout } = useAuth();
   const theme = useTheme();
   const { direction } = useLanguage();
   const location = useLocation();
   const isFullBleed = FULL_BLEED_ROUTES.includes(location.pathname);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+
+  // Auto sign-out after a period of inactivity (unattended POS terminals).
+  useIdleLogout(() => {
+    sessionStorage.setItem(IDLE_LOGOUT_FLAG, "1");
+    handleLogout();
+  }, !!user);
 
   if (isLoading) {
     return (
