@@ -1,58 +1,53 @@
-import React, { useState, useEffect } from "react";
+// src/pages/reports/MonthlyExpensesPage.tsx
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, getMonth, getYear } from "date-fns";
-import { arSA, enUS } from "date-fns/locale";
+import { arSA, enUS as enUSLocale } from "date-fns/locale";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
-import { useLanguage } from "@/context/LanguageContext";
-
-// MUI Components
 import {
-  Box,
+  Alert,
+  App as AntApp,
   Button,
-  Typography,
-  Stack,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  CircularProgress,
-  IconButton,
   Card,
-  CardContent,
-  Grid,
-} from "@mui/material";
-
-// Lucide Icons
+  ConfigProvider,
+  Flex,
+  Select,
+  Space,
+  Typography,
+} from "antd";
+import arEG from "antd/locale/ar_EG";
+import enUS from "antd/locale/en_US";
+import { getAntdThemeConfig } from "@/lib/antdTheme";
 import {
   ArrowLeft,
   ArrowRight,
-  Download,
-  FileText,
   FileSpreadsheet,
+  FileText,
+  Loader2,
 } from "lucide-react";
 
-import apiClient from "@/lib/axios";
-import { formatNumber } from "@/constants";
+import { useLanguage } from "@/context/LanguageContext";
+import { useTheme } from "@/context/ThemeContext";
+import { formatNumber, webUrl } from "@/constants";
 import { useMonthlyExpenses } from "@/hooks/useMonthlyExpenses";
 import DailyExpensesTable from "@/components/reports/expenses/DailyExpensesTable";
 import DayExpensesDialog from "@/components/reports/expenses/DayExpensesDialog";
 import { exportMonthlyExpensesPdf } from "@/services/exportService";
 import { Expense } from "@/services/expenseService";
-import { webUrl } from "@/constants";
+
+const { Title, Text } = Typography;
 
 const MonthlyExpensesPage: React.FC = () => {
   const { t } = useTranslation("reports");
   const { t: tCommon } = useTranslation("common");
   const { direction, language } = useLanguage();
+  const { resolvedTheme } = useTheme();
   const navigate = useNavigate();
+
   const currentDate = new Date();
-  const [selectedMonth, setSelectedMonth] = useState<number>(
-    getMonth(currentDate) + 1,
-  );
-  const [selectedYear, setSelectedYear] = useState<number>(
-    getYear(currentDate),
-  );
+  const [selectedMonth, setSelectedMonth] = useState<number>(getMonth(currentDate) + 1);
+  const [selectedYear, setSelectedYear] = useState<number>(getYear(currentDate));
   const [dayDialogOpen, setDayDialogOpen] = useState(false);
   const [selectedDayDate, setSelectedDayDate] = useState<string | null>(null);
   const [selectedDayExpenses, setSelectedDayExpenses] = useState<Expense[]>([]);
@@ -62,10 +57,7 @@ const MonthlyExpensesPage: React.FC = () => {
     data: reportData,
     isLoading,
     error,
-  } = useMonthlyExpenses({
-    year: selectedYear,
-    month: selectedMonth,
-  });
+  } = useMonthlyExpenses({ year: selectedYear, month: selectedMonth });
 
   const handleDayClick = (date: string, expenses: Expense[]) => {
     setSelectedDayDate(date);
@@ -73,282 +65,170 @@ const MonthlyExpensesPage: React.FC = () => {
     setDayDialogOpen(true);
   };
 
-  const handleExportExcel = async () => {
-    try {
-      const params = new URLSearchParams();
-      params.append("month", String(selectedMonth));
-      params.append("year", String(selectedYear));
-
-      const excelUrl = `${webUrl}/reports/monthly-expenses-excel?${params.toString()}`;
-      window.open(excelUrl, "_blank");
-      toast.success(t("excelOpenedNewTab"));
-    } catch (error: any) {
-      console.error("Error exporting Excel:", error);
-      toast.error(tCommon("error"), {
-        description: error?.message || t("errorExportingExcelDefault"),
-      });
-    }
+  const handleExportExcel = () => {
+    const params = new URLSearchParams();
+    params.append("month", String(selectedMonth));
+    params.append("year", String(selectedYear));
+    window.open(`${webUrl}/reports/monthly-expenses-excel?${params.toString()}`, "_blank");
+    toast.success(t("excelOpenedNewTab"));
   };
 
   const handleExportPdf = async () => {
     setIsPdfLoading(true);
     try {
       await exportMonthlyExpensesPdf(selectedYear, selectedMonth);
-    } catch (error: any) {
+    } catch (err) {
       toast.error(tCommon("error"), {
-        description: error?.message || t("errorExportingPdfDefault"),
+        description: err instanceof Error ? err.message : t("errorExportingPdfDefault"),
       });
     } finally {
       setIsPdfLoading(false);
     }
   };
 
-  const monthNames = Array.from({ length: 12 }, (_, i) =>
-    format(new Date(2000, i, 1), "MMMM", {
-      locale: language === "ar" ? arSA : enUS,
-    }),
+  const monthOptions = useMemo(
+    () =>
+      Array.from({ length: 12 }, (_, i) => ({
+        value: i + 1,
+        label: format(new Date(2000, i, 1), "MMMM", {
+          locale: language === "ar" ? arSA : enUSLocale,
+        }),
+      })),
+    [language]
   );
 
-  const years = Array.from({ length: 10 }, (_, i) => getYear(currentDate) - i);
+  const yearOptions = useMemo(
+    () =>
+      Array.from({ length: 10 }, (_, i) => getYear(currentDate) - i).map((year) => ({
+        value: year,
+        label: String(year),
+      })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
+  );
 
   return (
-    <Box sx={{ minHeight: "100vh" }}>
-      {/* Header */}
-      <Box
-        sx={{
-          borderBottom: "1px solid",
-          borderColor: "divider",
-          bgcolor: "background.paper",
-        }}
-      >
-        <Box sx={{ maxWidth: "100%", px: { xs: 2, sm: 3, lg: 4 }, py: 2.5 }}>
-          <Stack direction="column" spacing={3}>
-            {/* Top Bar: Title & Actions */}
-            <Stack
-              direction="row"
-              alignItems="center"
-              justifyContent="space-between"
-              flexWrap="wrap"
-              gap={2}
-            >
-              <Stack direction="row" alignItems="center" spacing={2}>
-                <IconButton
-                  onClick={() => navigate("/dashboard")}
-                  size="small"
-                  sx={{
-                    border: "1px solid",
-                    borderColor: "divider",
-                    borderRadius: 2,
-                    transition: "all 0.15s ease",
-                    "&:hover": { bgcolor: "action.hover" },
-                  }}
-                >
-                  {direction === "rtl" ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
-                </IconButton>
-                <Box>
-                  <Typography
-                    variant="h6"
-                    component="h1"
-                    sx={{ fontWeight: 600, lineHeight: 1.3 }}
-                  >
-                    {t("monthlyExpensesReportTitle")}
-                  </Typography>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ mt: 0.25 }}
-                  >
-                    {t("monthlyExpensesReportSubtitle")}
-                  </Typography>
-                </Box>
-              </Stack>
+    <ConfigProvider
+      direction={direction}
+      locale={language === "ar" ? arEG : enUS}
+      theme={getAntdThemeConfig(resolvedTheme)}
+    >
+      <AntApp>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Header */}
+          <Flex align="center" justify="space-between" gap={12} wrap>
+            <Flex align="center" gap={12}>
+              <Button
+                type="text"
+                icon={direction === "rtl" ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
+                onClick={() => navigate("/dashboard")}
+              />
+              <div>
+                <Title level={4} style={{ margin: 0 }}>
+                  {t("monthlyExpensesReportTitle")}
+                </Title>
+                <Text type="secondary">{t("monthlyExpensesReportSubtitle")}</Text>
+              </div>
+            </Flex>
+            <Space wrap>
+              <Button
+                icon={<FileSpreadsheet size={16} />}
+                disabled={isLoading || !reportData}
+                onClick={handleExportExcel}
+              >
+                {t("exportExcelButton")}
+              </Button>
+              <Button
+                type="primary"
+                icon={isPdfLoading ? <Loader2 size={16} className="animate-spin" /> : <FileText size={16} />}
+                disabled={isLoading || !reportData || isPdfLoading}
+                onClick={handleExportPdf}
+              >
+                {t("exportPdf")}
+              </Button>
+            </Space>
+          </Flex>
 
-              <Stack direction="row" gap={1} spacing={2}>
-                <Button
-                  onClick={handleExportExcel}
-                  variant="outlined"
-                  size="small"
-                  startIcon={<FileSpreadsheet size={16} />}
-                  disabled={isLoading || !reportData}
-                  sx={{
-                    borderRadius: 2,
-                    textTransform: "none",
-                    px: 2.5,
-                    py: 1,
-                    fontWeight: 500,
-                  }}
-                >
-                  {t("exportExcelButton")}
-                </Button>
-                <Button
-                  onClick={handleExportPdf}
-                  variant="contained"
-                  size="small"
-                  startIcon={
-                    isPdfLoading ? (
-                      <CircularProgress size={16} color="inherit" />
-                    ) : (
-                      <FileText size={16} />
-                    )
-                  }
-                  disabled={isLoading || !reportData || isPdfLoading}
-                  sx={{
-                    borderRadius: 2,
-                    textTransform: "none",
-                    px: 2.5,
-                    py: 1,
-                    fontWeight: 500,
-                    boxShadow: "none",
-                    "&:hover": { boxShadow: "0 2px 8px rgba(0,0,0,0.15)" },
-                  }}
-                >
-                  {t("exportPdf")}
-                </Button>
-              </Stack>
-            </Stack>
+          {/* Filters */}
+          <Card size="small">
+            <Flex gap={12} wrap align="center">
+              <Select
+                style={{ width: 160 }}
+                value={selectedMonth}
+                onChange={setSelectedMonth}
+                options={monthOptions}
+              />
+              <Select
+                style={{ width: 120 }}
+                value={selectedYear}
+                onChange={setSelectedYear}
+                options={yearOptions}
+              />
+            </Flex>
+          </Card>
 
-            {/* Month/Year Selectors */}
-            <Stack direction="row" spacing={2} alignItems="center">
-              <FormControl size="small" sx={{ minWidth: 120 }}>
-                <InputLabel>{t("monthLabel")}</InputLabel>
-                <Select
-                  value={selectedMonth}
-                  label={t("monthLabel")}
-                  onChange={(e) => setSelectedMonth(Number(e.target.value))}
-                >
-                  {monthNames.map((name, index) => (
-                    <MenuItem key={index + 1} value={index + 1}>
-                      {name}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-              <FormControl size="small" sx={{ minWidth: 100 }}>
-                <InputLabel>{t("yearLabel")}</InputLabel>
-                <Select
-                  value={selectedYear}
-                  label={t("yearLabel")}
-                  onChange={(e) => setSelectedYear(Number(e.target.value))}
-                >
-                  {years.map((year) => (
-                    <MenuItem key={year} value={year}>
-                      {year}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Stack>
-          </Stack>
-        </Box>
-      </Box>
-
-      <Box
-        sx={{
-          maxWidth: "1400px",
-          mx: "auto",
-          px: { xs: 2, sm: 3, lg: 4 },
-          py: 3,
-        }}
-      >
-        {/* Summary Cards */}
-        {reportData && (
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    {t("totalExpensesColumn")}
-                  </Typography>
-                  <Typography variant="h5" fontWeight="bold">
+          {/* Summary */}
+          {reportData && (
+            <Flex gap={12} wrap>
+              <Card size="small" style={{ flex: "1 1 220px" }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {t("totalExpensesColumn")}
+                </Text>
+                <div>
+                  <Text strong style={{ fontSize: 20 }}>
                     {formatNumber(reportData.month_summary.total)}
-                  </Typography>
-                </CardContent>
+                  </Text>
+                </div>
               </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    {t("cashExpensesLabel")}
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    fontWeight="bold"
-                    color="success.main"
-                  >
+              <Card size="small" style={{ flex: "1 1 220px" }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {t("cashExpensesLabel")}
+                </Text>
+                <div>
+                  <Text strong style={{ fontSize: 20, color: "#16a34a" }}>
                     {formatNumber(reportData.month_summary.cash_total)}
-                  </Typography>
-                </CardContent>
+                  </Text>
+                </div>
               </Card>
-            </Grid>
-            <Grid item xs={12} md={4}>
-              <Card>
-                <CardContent>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    gutterBottom
-                  >
-                    {t("bankExpensesLabel")}
-                  </Typography>
-                  <Typography
-                    variant="h5"
-                    fontWeight="bold"
-                    color="primary.main"
-                  >
+              <Card size="small" style={{ flex: "1 1 220px" }}>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  {t("bankExpensesLabel")}
+                </Text>
+                <div>
+                  <Text strong style={{ fontSize: 20, color: "#2563eb" }}>
                     {formatNumber(reportData.month_summary.bank_total)}
-                  </Typography>
-                </CardContent>
+                  </Text>
+                </div>
               </Card>
-            </Grid>
-          </Grid>
-        )}
+            </Flex>
+          )}
 
-        {/* Loading State */}
-        {isLoading && (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 4 }}>
-            <CircularProgress />
-          </Box>
-        )}
+          {/* Error */}
+          {error && <Alert type="error" showIcon message={t("errorLoadingDataGeneric")} />}
 
-        {/* Error State */}
-        {error && (
-          <Box sx={{ py: 4, textAlign: "center" }}>
-            <Typography variant="body2" color="error">
-              {t("errorLoadingDataGeneric")}
-            </Typography>
-          </Box>
-        )}
+          {/* Daily table */}
+          <Card size="small" styles={{ body: { padding: 0 } }}>
+            <DailyExpensesTable
+              dailyBreakdown={reportData?.daily_breakdown ?? []}
+              loading={isLoading}
+              onDayClick={handleDayClick}
+            />
+          </Card>
+        </div>
 
-        {/* Daily Expenses Table */}
-        {reportData && !isLoading && (
-          <DailyExpensesTable
-            dailyBreakdown={reportData.daily_breakdown}
-            onDayClick={handleDayClick}
-          />
-        )}
-      </Box>
-
-      {/* Day Expenses Dialog */}
-      <DayExpensesDialog
-        open={dayDialogOpen}
-        onClose={() => {
-          setDayDialogOpen(false);
-          setSelectedDayDate(null);
-          setSelectedDayExpenses([]);
-        }}
-        date={selectedDayDate}
-        expenses={selectedDayExpenses}
-      />
-    </Box>
+        {/* Day expenses dialog */}
+        <DayExpensesDialog
+          open={dayDialogOpen}
+          onClose={() => {
+            setDayDialogOpen(false);
+            setSelectedDayDate(null);
+            setSelectedDayExpenses([]);
+          }}
+          date={selectedDayDate}
+          expenses={selectedDayExpenses}
+        />
+      </AntApp>
+    </ConfigProvider>
   );
 };
 

@@ -1,258 +1,171 @@
 // src/pages/reports/InventoryLogPage.tsx
-import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { useForm, Controller, SubmitHandler } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import {
-  useNavigate,
-  useSearchParams,
-  Link as RouterLink,
-} from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate, useSearchParams, Link as RouterLink } from "react-router-dom";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import dayjs from "dayjs";
+import dayjs, { Dayjs } from "dayjs";
 import { useTranslation } from "react-i18next";
-import { cn } from "@/lib/utils";
-import { useLanguage } from "@/context/LanguageContext";
-
-// shadcn UI
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
+  App as AntApp,
+  Button,
+  Card,
+  ConfigProvider,
+  DatePicker,
+  Flex,
+  Input,
   Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Pagination,
-  PaginationContent,
-  PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
-} from "@/components/ui/pagination";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-
-// Icons
+  Space,
+  Table,
+  Tag,
+  Tooltip,
+  Typography,
+} from "antd";
+import type { TableProps } from "antd";
+import arEG from "antd/locale/ar_EG";
+import enUS from "antd/locale/en_US";
+import { getAntdThemeConfig } from "@/lib/antdTheme";
 import {
   ArrowLeft,
   ArrowRight,
-  Filter,
-  Search,
   Download,
   Loader2,
-  AlertCircle,
-  ChevronDown,
-  ChevronUp,
-  PackageSearch,
-  X,
-  Check,
+  RefreshCw,
+  Search,
 } from "lucide-react";
 
-// Services and Types
-import inventoryLogService, {
-  InventoryLogEntry,
-} from "../../services/inventoryLogService";
-import { PaginatedResponse as LogPaginatedResponse } from "../../services/clientService";
-import { warehouseService, Warehouse } from "../../services/warehouseService";
-import productService, { Product } from "../../services/productService";
+import { useLanguage } from "@/context/LanguageContext";
+import { useTheme } from "@/context/ThemeContext";
 import { formatNumber } from "@/constants";
 
-// --- Zod Schema ---
-const buildLogFilterSchema = (t: (key: string) => string) =>
-  z
-    .object({
-      startDate: z.string().optional(),
-      endDate: z.string().optional(),
-      productId: z.string().nullable().optional(),
-      warehouseId: z.string().nullable().optional(),
-      type: z.string().nullable().optional(),
-      search: z.string().optional(),
-    })
-    .refine(
-      (data) =>
-        !data.endDate || !data.startDate || data.endDate >= data.startDate,
-      { message: t("inventoryLogEndDateValidation"), path: ["endDate"] }
-    );
-type LogFilterValues = z.infer<ReturnType<typeof buildLogFilterSchema>>;
+// Services and Types
+import inventoryLogService, { InventoryLogEntry } from "@/services/inventoryLogService";
+import { warehouseService } from "@/services/warehouseService";
+import productService from "@/services/productService";
 
-const buildMovementTypes = (t: (key: string) => string) => [
-  { value: "purchase", label: t("movementTypePurchase"), className: "bg-emerald-100 text-emerald-800 border-emerald-200" },
-  { value: "sale", label: t("movementTypeSale"), className: "bg-red-100 text-red-800 border-red-200" },
-  { value: "adjustment", label: t("movementTypeAdjustment"), className: "bg-amber-100 text-amber-800 border-amber-200" },
-  { value: "requisition_issue", label: t("movementTypeRequisitionIssue"), className: "bg-sky-100 text-sky-800 border-sky-200" },
-];
+const { Title, Text } = Typography;
+const { RangePicker } = DatePicker;
+
+const PER_PAGE = 25;
+
+const MOVEMENT_TAG_COLOR: Record<string, string> = {
+  purchase: "green",
+  sale: "red",
+  adjustment: "gold",
+  requisition_issue: "blue",
+};
 
 const InventoryLogPage: React.FC = () => {
   const { t } = useTranslation("reports");
   const { t: tCommon } = useTranslation("common");
-  const { direction } = useLanguage();
-  const logFilterSchema = useMemo(() => buildLogFilterSchema(t), [t]);
-  const movementTypes = useMemo(() => buildMovementTypes(t), [t]);
-  const getMovementType = useCallback(
-    (type: string) => movementTypes.find((m) => m.value === type),
-    [movementTypes]
-  );
+  const { direction, language } = useLanguage();
+  const { resolvedTheme } = useTheme();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const [logData, setLogData] =
-    useState<LogPaginatedResponse<InventoryLogEntry> | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [warehouses, setWarehouses] = useState<Warehouse[]>([]);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [showFilters, setShowFilters] = useState(true);
-
-  // Product autocomplete
-  const [productOpen, setProductOpen] = useState(false);
-  const [productInput, setProductInput] = useState("");
-  const [productOptions, setProductOptions] = useState<Product[]>([]);
-  const [loadingProducts, setLoadingProducts] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const productDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const form = useForm<LogFilterValues>({
-    resolver: zodResolver(logFilterSchema),
-    defaultValues: {
-      startDate: searchParams.get("startDate") || "",
-      endDate: searchParams.get("endDate") || "",
-      productId: searchParams.get("productId") || null,
-      warehouseId: searchParams.get("warehouseId") || null,
-      type: searchParams.get("type") || null,
-      search: searchParams.get("search") || "",
-    },
-  });
-  const { control, handleSubmit, reset, watch } = form;
-
-  useEffect(() => {
-    warehouseService
-      .getAll()
-      .then(setWarehouses)
-      .catch(() => toast.error(t("failedToLoadWarehouses"), { id: "warehouse-fetch-error" }));
-  }, []);
-
-  // Fetch product suggestions with debounce
-  useEffect(() => {
-    if (productDebounceRef.current) clearTimeout(productDebounceRef.current);
-    if (!productOpen) return;
-    productDebounceRef.current = setTimeout(async () => {
-      setLoadingProducts(true);
-      try {
-        const results = await productService.getProductsForAutocomplete(productInput, 20);
-        setProductOptions(results);
-      } catch {
-        setProductOptions([]);
-      } finally {
-        setLoadingProducts(false);
-      }
-    }, 300);
-    return () => {
-      if (productDebounceRef.current) clearTimeout(productDebounceRef.current);
-    };
-  }, [productInput, productOpen]);
-
-  const fetchLog = useCallback(
-    async (filters: LogFilterValues, page: number) => {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await inventoryLogService.getInventoryLog(page, 25, {
-          startDate: filters.startDate || undefined,
-          endDate: filters.endDate || undefined,
-          productId: filters.productId ? Number(filters.productId) : undefined,
-          warehouseId: filters.warehouseId ? Number(filters.warehouseId) : undefined,
-          type: filters.type || undefined,
-          search: filters.search || undefined,
-        });
-        setLogData(data);
-      } catch (err) {
-        setError(t("failedToLoadLog"));
-        toast.error(t("failedToLoadLog"), { id: "log-fetch-error" });
-      } finally {
-        setIsLoading(false);
-      }
-    },
+  const movementTypes = useMemo(
+    () => [
+      { value: "purchase", label: t("movementTypePurchase") },
+      { value: "sale", label: t("movementTypeSale") },
+      { value: "adjustment", label: t("movementTypeAdjustment") },
+      { value: "requisition_issue", label: t("movementTypeRequisitionIssue") },
+    ],
     [t]
   );
+  const getMovementLabel = (type: string) => movementTypes.find((m) => m.value === type)?.label ?? type;
 
-  const currentFilters = useMemo(
-    () => ({
-      startDate: searchParams.get("startDate") || "",
-      endDate: searchParams.get("endDate") || "",
-      productId: searchParams.get("productId") || null,
-      warehouseId: searchParams.get("warehouseId") || null,
-      type: searchParams.get("type") || null,
-      search: searchParams.get("search") || "",
-    }),
-    [searchParams]
-  );
+  const startDate = searchParams.get("startDate") || "";
+  const endDate = searchParams.get("endDate") || "";
+  const productId = searchParams.get("productId") || "";
+  const productName = searchParams.get("productName") || "";
+  const warehouseId = searchParams.get("warehouseId") || "";
+  const type = searchParams.get("type") || "";
+  const search = searchParams.get("search") || "";
+  const page = Number(searchParams.get("page") || "1");
 
-  const currentPage = useMemo(
-    () => Number(searchParams.get("page") || "1"),
-    [searchParams]
-  );
+  const [searchInput, setSearchInput] = useState(search);
+  const [productSearch, setProductSearch] = useState("");
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  useEffect(() => setSearchInput(search), [search]);
+
+  const patchParams = (patch: Record<string, string | null>) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(patch).forEach(([key, value]) => {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    });
+    setSearchParams(next);
+  };
 
   useEffect(() => {
-    reset(currentFilters);
-    fetchLog(currentFilters, currentPage);
-  }, [currentFilters, currentPage, fetchLog, reset]);
+    const timer = setTimeout(() => {
+      if (searchInput !== search) patchParams({ search: searchInput || null, page: "1" });
+    }, 400);
+    return () => clearTimeout(timer);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
 
-  const onFilterSubmit: SubmitHandler<LogFilterValues> = (data) => {
-    const params = new URLSearchParams();
-    Object.entries(data).forEach(([key, value]) => {
-      if (value) params.set(key, value);
-    });
-    setSearchParams(params);
+  const warehousesQuery = useQuery({
+    queryKey: ["inventory-log-warehouses"],
+    queryFn: () => warehouseService.getAll(),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const productOptionsQuery = useQuery({
+    queryKey: ["inventory-log-products", productSearch],
+    queryFn: () => productService.getProductsForAutocomplete(productSearch, 20),
+    placeholderData: keepPreviousData,
+  });
+
+  const productOptions = useMemo(() => {
+    const opts = (productOptionsQuery.data ?? []).map((p) => ({
+      value: String(p.id),
+      label: p.sku ? `${p.name} (${p.sku})` : p.name,
+    }));
+    if (productId && !opts.some((o) => o.value === productId)) {
+      opts.unshift({ value: productId, label: productName || `#${productId}` });
+    }
+    return opts;
+  }, [productOptionsQuery.data, productId, productName]);
+
+  const filters = {
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    productId: productId ? Number(productId) : undefined,
+    warehouseId: warehouseId ? Number(warehouseId) : undefined,
+    type: type || undefined,
+    search: search || undefined,
   };
+
+  const logQuery = useQuery({
+    queryKey: ["inventory-log", page, filters.startDate, filters.endDate, filters.productId, filters.warehouseId, filters.type, filters.search],
+    queryFn: () => inventoryLogService.getInventoryLog(page, PER_PAGE, filters),
+    placeholderData: keepPreviousData,
+  });
+
+  const logData = logQuery.data;
+  const entries = logData?.data ?? [];
+
+  const hasActiveFilters = !!(startDate || endDate || productId || warehouseId || type || search);
 
   const clearFilters = () => {
-    reset({ startDate: "", endDate: "", productId: null, warehouseId: null, type: null, search: "" });
-    setSelectedProduct(null);
-    setProductInput("");
-    setSearchParams({});
+    setSearchInput("");
+    setProductSearch("");
+    setSearchParams(new URLSearchParams());
   };
 
-  const handlePageChange = (newPage: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("page", newPage.toString());
-    setSearchParams(params);
+  const handleRangeChange = (values: null | (Dayjs | null)[]) => {
+    patchParams({
+      startDate: values?.[0] ? values[0].format("YYYY-MM-DD") : null,
+      endDate: values?.[1] ? values[1].format("YYYY-MM-DD") : null,
+      page: "1",
+    });
   };
 
   const generatePdf = async () => {
     setIsGeneratingPdf(true);
     try {
-      const blob = await inventoryLogService.generatePdf({
-        startDate: watch("startDate") || undefined,
-        endDate: watch("endDate") || undefined,
-        productId: watch("productId") ? Number(watch("productId")) : undefined,
-        warehouseId: watch("warehouseId") ? Number(watch("warehouseId")) : undefined,
-        type: watch("type") || undefined,
-        search: watch("search") || undefined,
-      });
+      const blob = await inventoryLogService.generatePdf(filters);
       const url = window.URL.createObjectURL(new Blob([blob], { type: "application/pdf" }));
       const link = document.createElement("a");
       link.href = url;
@@ -261,453 +174,251 @@ const InventoryLogPage: React.FC = () => {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      toast.success(t("pdfGenerated"), { id: "pdf-success" });
+      toast.success(t("pdfGenerated"));
     } catch {
-      toast.error(t("pdfGenerationFailed"), { id: "pdf-error" });
+      toast.error(t("pdfGenerationFailed"));
     } finally {
       setIsGeneratingPdf(false);
     }
   };
 
-  return (
-    <div className="p-4 space-y-4 min-h-screen bg-muted/30" dir={direction}>
-      {/* Header */}
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-9 w-9 shrink-0"
-            onClick={() => navigate("/reports")}
-          >
-            {direction === "rtl" ? <ArrowRight size={16} /> : <ArrowLeft size={16} />}
-          </Button>
-          <div>
-            <h1 className="text-xl font-bold text-foreground">{t("inventoryLogPageTitle")}</h1>
-            <p className="text-sm text-muted-foreground">{t("inventoryLogPageSubtitle")}</p>
-          </div>
-        </div>
-        <Button
-          onClick={generatePdf}
-          disabled={isGeneratingPdf}
-          size="sm"
-          className="gap-2"
-        >
-          {isGeneratingPdf ? (
-            <Loader2 size={15} className="animate-spin" />
-          ) : (
-            <Download size={15} />
+  const columns: TableProps<InventoryLogEntry>["columns"] = [
+    {
+      title: t("dateColumn"),
+      dataIndex: "transaction_date",
+      key: "date",
+      width: 110,
+      render: (value: string) => (
+        <Space direction="vertical" size={0}>
+          <Text style={{ fontSize: 12 }}>{dayjs(value).format("YYYY-MM-DD")}</Text>
+          <Text type="secondary" style={{ fontSize: 12 }}>
+            {dayjs(value).format("HH:mm")}
+          </Text>
+        </Space>
+      ),
+    },
+    {
+      title: t("operationColumn"),
+      dataIndex: "type",
+      key: "type",
+      align: "center",
+      width: 130,
+      render: (movementType: string) => (
+        <Tag color={MOVEMENT_TAG_COLOR[movementType] ?? "default"}>{getMovementLabel(movementType)}</Tag>
+      ),
+    },
+    {
+      title: t("productLabel"),
+      key: "product",
+      render: (_v, row) => (
+        <Space direction="vertical" size={0}>
+          <Text style={{ fontSize: 13, fontWeight: 500 }}>{row.product_name}</Text>
+          {row.product_sku && (
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              {row.product_sku}
+            </Text>
           )}
-          {isGeneratingPdf ? t("exportingEllipsis") : t("exportPdf")}
-        </Button>
-      </div>
+          {row.batch_number && (
+            <Text style={{ fontSize: 12, color: "#0284c7" }}>
+              {t("batchColonPrefix")} {row.batch_number}
+            </Text>
+          )}
+        </Space>
+      ),
+    },
+    {
+      title: t("warehouseLabel"),
+      dataIndex: "warehouse_name",
+      key: "warehouse",
+      align: "center",
+      width: 140,
+      render: (name: string) => <Text type="secondary">{name || "—"}</Text>,
+    },
+    {
+      title: t("quantityColumn"),
+      dataIndex: "quantity_change",
+      key: "quantity",
+      align: "center",
+      width: 100,
+      render: (value: number) => (
+        <Text strong style={{ color: value > 0 ? "#16a34a" : "#dc2626" }}>
+          <span dir="ltr">
+            {value > 0 ? "+" : ""}
+            {formatNumber(value)}
+          </span>
+        </Text>
+      ),
+    },
+    {
+      title: t("documentColumn"),
+      key: "document",
+      align: "center",
+      width: 150,
+      render: (_v, row) => (
+        <Space direction="vertical" size={0} align="center">
+          <RouterLink
+            to={
+              row.type === "purchase"
+                ? `/purchases/${row.document_id}`
+                : row.type === "sale"
+                  ? `/sales/${row.document_id}`
+                  : "#"
+            }
+            style={{ fontSize: 12, fontWeight: 600 }}
+          >
+            {row.document_reference || `#${row.document_id}`}
+          </RouterLink>
+          {row.reason_notes && (
+            <Tooltip title={row.reason_notes}>
+              <Text type="secondary" style={{ fontSize: 11, maxWidth: 140 }} ellipsis>
+                {row.reason_notes}
+              </Text>
+            </Tooltip>
+          )}
+        </Space>
+      ),
+    },
+    {
+      title: t("byUserColumn"),
+      dataIndex: "user_name",
+      key: "user",
+      align: "center",
+      width: 110,
+      render: (name: string | null) => <Tag>{name || "System"}</Tag>,
+    },
+  ];
 
-      {/* Filter Card */}
-      <Card className="shadow-sm">
-        <CardHeader
-          className="py-3 px-4 cursor-pointer select-none"
-          onClick={() => setShowFilters(!showFilters)}
-        >
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm font-semibold flex items-center gap-2 text-muted-foreground">
-              <Filter size={15} />
-              {t("filterOptionsLabel")}
-            </CardTitle>
-            {showFilters ? <ChevronUp size={15} className="text-muted-foreground" /> : <ChevronDown size={15} className="text-muted-foreground" />}
-          </div>
-        </CardHeader>
-
-        {showFilters && (
-          <CardContent className="px-4 pb-4 pt-0">
-            <form onSubmit={handleSubmit(onFilterSubmit)}>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-                {/* Product Autocomplete */}
-                <div className="sm:col-span-2 space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t("productLabel")}</Label>
-                  <Controller
-                    control={control}
-                    name="productId"
-                    render={({ field }) => (
-                      <Popover open={productOpen} onOpenChange={setProductOpen}>
-                        <PopoverTrigger asChild>
-                          <Button
-                            variant="outline"
-                            role="combobox"
-                            aria-expanded={productOpen}
-                            className="w-full h-9 justify-between text-sm font-normal"
-                          >
-                            {selectedProduct ? (
-                              <span className="truncate">{selectedProduct.name}</span>
-                            ) : (
-                              <span className="text-muted-foreground">{t("searchForProductPlaceholder")}</span>
-                            )}
-                            <div className="flex items-center gap-1 shrink-0">
-                              {selectedProduct && (
-                                <span
-                                  role="button"
-                                  tabIndex={0}
-                                  className="rounded-sm p-0.5 hover:bg-muted"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setSelectedProduct(null);
-                                    setProductInput("");
-                                    field.onChange(null);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter" || e.key === " ") {
-                                      e.stopPropagation();
-                                      setSelectedProduct(null);
-                                      setProductInput("");
-                                      field.onChange(null);
-                                    }
-                                  }}
-                                >
-                                  <X size={12} />
-                                </span>
-                              )}
-                              <ChevronDown size={14} className="text-muted-foreground" />
-                            </div>
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-[320px] p-0" align="start">
-                          <Command shouldFilter={false}>
-                            <CommandInput
-                              placeholder={t("typeProductNamePlaceholder")}
-                              value={productInput}
-                              onValueChange={setProductInput}
-                            />
-                            <CommandList>
-                              {loadingProducts ? (
-                                <div className="flex justify-center py-4">
-                                  <Loader2 size={16} className="animate-spin text-muted-foreground" />
-                                </div>
-                              ) : (
-                                <>
-                                  <CommandEmpty>{t("noMatchingProducts")}</CommandEmpty>
-                                  <CommandGroup>
-                                    {productOptions.map((p) => (
-                                      <CommandItem
-                                        key={p.id}
-                                        value={String(p.id)}
-                                        onSelect={() => {
-                                          setSelectedProduct(p);
-                                          field.onChange(String(p.id));
-                                          setProductOpen(false);
-                                        }}
-                                      >
-                                        <Check
-                                          size={14}
-                                          className={cn(
-                                            "shrink-0",
-                                            field.value === String(p.id) ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        <div className="flex-1 min-w-0">
-                                          <div className="text-sm truncate">{p.name}</div>
-                                          {p.sku && (
-                                            <div className="text-xs text-muted-foreground">{p.sku}</div>
-                                          )}
-                                        </div>
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </>
-                              )}
-                            </CommandList>
-                          </Command>
-                        </PopoverContent>
-                      </Popover>
-                    )}
-                  />
-                </div>
-
-                {/* General Search (batch, document) */}
-                <div className="sm:col-span-2 space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t("searchBatchDocumentLabel")}</Label>
-                  <Controller
-                    control={control}
-                    name="search"
-                    render={({ field }) => (
-                      <div className="relative">
-                        <Search size={15} className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                        <Input
-                          {...field}
-                          value={field.value ?? ""}
-                          placeholder={t("batchOrDocumentNumberPlaceholder")}
-                          className="ps-9 h-9 text-sm"
-                        />
-                      </div>
-                    )}
-                  />
-                </div>
-
-                {/* Warehouse */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t("warehouseLabel")}</Label>
-                  <Controller
-                    control={control}
-                    name="warehouseId"
-                    render={({ field }) => (
-                      <Select
-                        value={field.value ?? ""}
-                        onValueChange={(v) => field.onChange(v === "all" ? null : v)}
-                      >
-                        <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder={t("allLabel")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">{t("allLabel")}</SelectItem>
-                          {warehouses.map((w) => (
-                            <SelectItem key={w.id} value={w.id.toString()}>
-                              {w.name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-
-                {/* Type */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t("movementTypeLabel")}</Label>
-                  <Controller
-                    control={control}
-                    name="type"
-                    render={({ field }) => (
-                      <Select
-                        value={field.value ?? ""}
-                        onValueChange={(v) => field.onChange(v === "all" ? null : v)}
-                      >
-                        <SelectTrigger className="h-9 text-sm">
-                          <SelectValue placeholder={t("allLabel")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">{t("allLabel")}</SelectItem>
-                          {movementTypes.map((mt) => (
-                            <SelectItem key={mt.value} value={mt.value}>
-                              {mt.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    )}
-                  />
-                </div>
-
-                {/* Start Date */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t("startDateLabel")}</Label>
-                  <Controller
-                    control={control}
-                    name="startDate"
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        type="date"
-                        className="h-9 text-sm"
-                      />
-                    )}
-                  />
-                </div>
-
-                {/* End Date */}
-                <div className="space-y-1">
-                  <Label className="text-xs text-muted-foreground">{t("endDateLabel")}</Label>
-                  <Controller
-                    control={control}
-                    name="endDate"
-                    render={({ field }) => (
-                      <Input
-                        {...field}
-                        value={field.value ?? ""}
-                        type="date"
-                        className="h-9 text-sm"
-                      />
-                    )}
-                  />
-                </div>
+  return (
+    <ConfigProvider
+      direction={direction}
+      locale={language === "ar" ? arEG : enUS}
+      theme={getAntdThemeConfig(resolvedTheme)}
+    >
+      <AntApp>
+        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>
+          {/* Header */}
+          <Flex align="center" justify="space-between" gap={12} wrap>
+            <Flex align="center" gap={12}>
+              <Button
+                type="text"
+                icon={direction === "rtl" ? <ArrowRight size={18} /> : <ArrowLeft size={18} />}
+                onClick={() => navigate("/reports")}
+              />
+              <div>
+                <Title level={4} style={{ margin: 0 }}>
+                  {t("inventoryLogPageTitle")}
+                </Title>
+                <Text type="secondary">{t("inventoryLogPageSubtitle")}</Text>
               </div>
+            </Flex>
+            <Button
+              type="primary"
+              icon={isGeneratingPdf ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+              disabled={isGeneratingPdf}
+              onClick={generatePdf}
+            >
+              {isGeneratingPdf ? t("exportingEllipsis") : t("exportPdf")}
+            </Button>
+          </Flex>
 
-              <div className="flex justify-end gap-2 mt-3">
-                <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
+          {/* Filters */}
+          <Card size="small" title={t("filterOptionsLabel")}>
+            <Flex gap={12} wrap align="center">
+              <Select
+                showSearch
+                allowClear
+                placeholder={t("searchForProductPlaceholder")}
+                style={{ width: 240 }}
+                value={productId || undefined}
+                filterOption={false}
+                loading={productOptionsQuery.isFetching}
+                notFoundContent={
+                  productOptionsQuery.isFetching ? tCommon("loading") : t("noMatchingProducts")
+                }
+                onSearch={setProductSearch}
+                onChange={(value, option) =>
+                  patchParams({
+                    productId: value ?? null,
+                    productName: value ? (option as { label: string })?.label ?? "" : null,
+                    page: "1",
+                  })
+                }
+                options={productOptions}
+              />
+
+              <Input
+                allowClear
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder={t("batchOrDocumentNumberPlaceholder")}
+                prefix={<Search size={14} style={{ opacity: 0.5 }} />}
+                style={{ width: 220 }}
+              />
+
+              <Select
+                allowClear
+                placeholder={t("warehouseLabel")}
+                style={{ width: 170 }}
+                loading={warehousesQuery.isLoading}
+                value={warehouseId || undefined}
+                onChange={(value) => patchParams({ warehouseId: value ?? null, page: "1" })}
+                options={(warehousesQuery.data ?? []).map((w) => ({ value: String(w.id), label: w.name }))}
+              />
+
+              <Select
+                allowClear
+                placeholder={t("movementTypeLabel")}
+                style={{ width: 170 }}
+                value={type || undefined}
+                onChange={(value) => patchParams({ type: value ?? null, page: "1" })}
+                options={movementTypes}
+              />
+
+              <RangePicker
+                value={startDate || endDate ? [startDate ? dayjs(startDate) : null, endDate ? dayjs(endDate) : null] : null}
+                onChange={handleRangeChange}
+              />
+
+              {hasActiveFilters && (
+                <Button type="link" onClick={clearFilters}>
                   {tCommon("clear")}
                 </Button>
-                <Button type="submit" size="sm">
-                  {t("applyButton")}
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        )}
-      </Card>
+              )}
 
-      {/* Results */}
-      <Card className="shadow-sm overflow-hidden">
-        {isLoading ? (
-          <div className="flex justify-center items-center py-16">
-            <Loader2 size={28} className="animate-spin text-muted-foreground" />
-          </div>
-        ) : error ? (
-          <div className="flex flex-col items-center justify-center py-16 text-destructive gap-3">
-            <AlertCircle size={36} />
-            <p className="text-sm">{error}</p>
-          </div>
-        ) : !logData || logData.data.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground gap-3">
-            <PackageSearch size={36} />
-            <p className="text-sm">{t("noMatchingLogEntries")}</p>
-          </div>
-        ) : (
-          <>
-            {/* Result count */}
-            <div className="px-4 py-2 border-b bg-muted/30 flex items-center justify-between">
-              <span className="text-xs text-muted-foreground">
-                {t("totalResultsColonLabel")} <span className="font-semibold text-foreground">{logData.total}</span>
-              </span>
-              <span className="text-xs text-muted-foreground">
-                {t("pageOfTotalLabel", { current: currentPage, total: logData.last_page })}
-              </span>
-            </div>
+              <div style={{ flex: 1 }} />
 
-            <Table>
-              <TableHeader>
-                <TableRow className="bg-muted/30 hover:bg-muted/30">
-                  <TableHead className="text-center text-xs font-semibold py-2">{t("dateColumn")}</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">{t("operationColumn")}</TableHead>
-                  <TableHead className="text-start text-xs font-semibold py-2">{t("productLabel")}</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">{t("warehouseLabel")}</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">{t("quantityColumn")}</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">{t("documentColumn")}</TableHead>
-                  <TableHead className="text-center text-xs font-semibold py-2">{t("byUserColumn")}</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {logData.data.map((row: InventoryLogEntry, i: number) => {
-                  const typeInfo = getMovementType(row.type);
-                  return (
-                    <TableRow key={i} className="hover:bg-muted/20 text-sm">
-                      {/* Date */}
-                      <TableCell className="text-center py-2 whitespace-nowrap">
-                        <div className="text-xs font-medium">
-                          {dayjs(row.transaction_date).format("YYYY-MM-DD")}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {dayjs(row.transaction_date).format("HH:mm")}
-                        </div>
-                      </TableCell>
+              <Tooltip title={tCommon("refresh")}>
+                <Button
+                  icon={<RefreshCw size={16} className={logQuery.isFetching ? "animate-spin" : ""} />}
+                  onClick={() => logQuery.refetch()}
+                />
+              </Tooltip>
+            </Flex>
+          </Card>
 
-                      {/* Type Badge */}
-                      <TableCell className="text-center py-2">
-                        <Badge
-                          variant="outline"
-                          className={cn("text-xs font-medium", typeInfo?.className)}
-                        >
-                          {typeInfo?.label ?? row.type}
-                        </Badge>
-                      </TableCell>
-
-                      {/* Product */}
-                      <TableCell className="text-start py-2">
-                        <div className="font-medium text-xs">{row.product_name}</div>
-                        {row.product_sku && (
-                          <div className="text-xs text-muted-foreground">{row.product_sku}</div>
-                        )}
-                        {row.batch_number && (
-                          <div className="text-xs text-sky-600">{t("batchColonPrefix")} {row.batch_number}</div>
-                        )}
-                      </TableCell>
-
-                      {/* Warehouse */}
-                      <TableCell className="text-center py-2">
-                        <span className="text-xs text-muted-foreground">
-                          {row.warehouse_name || "—"}
-                        </span>
-                      </TableCell>
-
-                      {/* Quantity */}
-                      <TableCell className="text-center py-2">
-                        <span
-                          dir="ltr"
-                          className={cn(
-                            "text-xs font-bold",
-                            row.quantity_change > 0 ? "text-emerald-700" : "text-red-700"
-                          )}
-                        >
-                          {row.quantity_change > 0 ? "+" : ""}
-                          {formatNumber(row.quantity_change)}
-                        </span>
-                      </TableCell>
-
-                      {/* Document */}
-                      <TableCell className="text-center py-2">
-                        <RouterLink
-                          to={
-                            row.type === "purchase"
-                              ? `/purchases/${row.document_id}`
-                              : row.type === "sale"
-                              ? `/sales/${row.document_id}`
-                              : "#"
-                          }
-                          className="text-xs text-blue-600 hover:underline font-medium"
-                        >
-                          {row.document_reference || `#${row.document_id}`}
-                        </RouterLink>
-                        {row.reason_notes && (
-                          <div
-                            className="text-xs text-muted-foreground max-w-[160px] truncate mx-auto"
-                            title={row.reason_notes}
-                          >
-                            {row.reason_notes}
-                          </div>
-                        )}
-                      </TableCell>
-
-                      {/* User */}
-                      <TableCell className="text-center py-2">
-                        <span className="text-xs bg-muted px-2 py-0.5 rounded-md text-muted-foreground">
-                          {row.user_name || "System"}
-                        </span>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
-
-            {/* Pagination */}
-            {logData.last_page > 1 && (
-              <div className="border-t px-4 py-3">
-                <Pagination>
-                  <PaginationContent>
-                    <PaginationItem>
-                      <PaginationPrevious
-                        onClick={() => handlePageChange(currentPage - 1)}
-                        aria-disabled={currentPage <= 1}
-                        className={cn(currentPage <= 1 && "pointer-events-none opacity-50")}
-                      />
-                    </PaginationItem>
-                    <PaginationItem>
-                      <span className="text-xs text-muted-foreground px-3">
-                        {currentPage} / {logData.last_page}
-                      </span>
-                    </PaginationItem>
-                    <PaginationItem>
-                      <PaginationNext
-                        onClick={() => handlePageChange(currentPage + 1)}
-                        aria-disabled={currentPage >= logData.last_page}
-                        className={cn(currentPage >= logData.last_page && "pointer-events-none opacity-50")}
-                      />
-                    </PaginationItem>
-                  </PaginationContent>
-                </Pagination>
-              </div>
-            )}
-          </>
-        )}
-      </Card>
-    </div>
+          {/* Results */}
+          <Card size="small" styles={{ body: { padding: 0 } }}>
+            <Table<InventoryLogEntry>
+              rowKey={(row, index) => `${row.document_id}-${row.type}-${row.product_id}-${index}`}
+              size="small"
+              columns={columns}
+              dataSource={entries}
+              loading={logQuery.isLoading}
+              scroll={{ x: 1000 }}
+              locale={{ emptyText: t("noMatchingLogEntries") }}
+              pagination={{
+                current: logData?.current_page ?? page,
+                pageSize: PER_PAGE,
+                total: logData?.total ?? entries.length,
+                showSizeChanger: false,
+                showTotal: (total) => `${t("totalResultsColonLabel")} ${total}`,
+              }}
+              onChange={(pagination) => patchParams({ page: String(pagination.current ?? 1) })}
+            />
+          </Card>
+        </div>
+      </AntApp>
+    </ConfigProvider>
   );
 };
 

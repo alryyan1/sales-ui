@@ -137,12 +137,6 @@ export const reportNavItems: NavItem[] = [
     category: "التقارير",
   },
   {
-    to: "/reports/purchases",
-    label: "purchaseReport",
-    permission: null,
-    category: "التقارير",
-  },
-  {
     to: "/reports/inventory-log",
     label: "inventoryLogReport",
     permission: null,
@@ -157,12 +151,6 @@ export const reportNavItems: NavItem[] = [
   {
     to: "/reports/monthly-expenses",
     label: "monthlyExpensesReport",
-    permission: null,
-    category: "التقارير",
-  },
-  {
-    to: "/reports/profit-overview",
-    label: "profitOverview",
     permission: null,
     category: "التقارير",
   },

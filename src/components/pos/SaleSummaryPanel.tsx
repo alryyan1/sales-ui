@@ -36,6 +36,7 @@ import AccessTimeIcon from "@mui/icons-material/AccessTime";
 import RequestQuoteIcon from "@mui/icons-material/RequestQuote";
 import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
 import CheckCircleIcon from "@mui/icons-material/CheckCircle";
+import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 import { Sale, Payment } from "@/services/saleService";
 import { Client } from "@/services/clientService";
 import { useAuth } from "@/context/AuthContext";
@@ -469,32 +470,47 @@ export const SaleSummaryPanel: React.FC<SaleSummaryPanelProps> = ({
             <Stack direction="row" alignItems="center" gap={0.3}>
               <CalendarTodayIcon sx={{ fontSize: 11, color: "rgba(255,255,255,0.55)" }} />
               {dateEditing ? (
-                <input
-                  type="date"
-                  value={tempDate}
-                  autoFocus
+                <DatePicker
+                  value={tempDate ? dayjs(tempDate).toDate() : null}
+                  format="dd-MM-yyyy"
                   disabled={saleDateLoading}
-                  onChange={(e) => setTempDate(e.target.value)}
-                  onBlur={async () => {
-                    if (tempDate && tempDate !== selectedSale.sale_date) {
-                      await handleSaleDateChange(tempDate);
+                  onChange={async (newValue) => {
+                    if (!newValue) return;
+                    const formatted = dayjs(newValue).format("YYYY-MM-DD");
+                    setTempDate(formatted);
+                    if (formatted !== selectedSale.sale_date) {
+                      await handleSaleDateChange(formatted);
                     }
-                    setDateEditing(false);
                   }}
-                  style={{
-                    background: "transparent",
-                    border: "none",
-                    borderBottom: "1px solid rgba(255,255,255,0.4)",
-                    color: "rgba(255,255,255,0.9)",
-                    fontSize: "0.68rem",
-                    outline: "none",
-                    colorScheme: "dark",
-                    width: 100,
+                  onClose={() => setDateEditing(false)}
+                  slotProps={{
+                    textField: {
+                      size: "small",
+                      variant: "standard",
+                      autoFocus: true,
+                      sx: {
+                        width: 100,
+                        color:'white',
+                        "& .MuiInput-underline:before": { borderBottomColor: "rgba(255,255,255,0.4)" },
+                        "& .MuiInput-underline:after": { borderBottomColor: "rgba(255,255,255,0.9)" },
+                        "& .MuiPickersSectionList-root": {
+                          color: "rgba(255,255,255,0.9)",
+                          fontSize: "0.68rem",
+                          padding: "2px 0",
+                        },
+                        "& .MuiPickersSectionList-sectionContent": {
+                          color: "rgba(255,255,255,0.9)",
+                        },
+                      },
+                    },
+                    openPickerButton: {
+                      sx: { color: "rgba(255,255,255,0.55)", p: 0.25, "& svg": { fontSize: 14 } },
+                    },
                   }}
                 />
               ) : (
                 <Typography sx={{ fontSize: "0.68rem" }} color="rgba(255,255,255,0.65)">
-                  {selectedSale.sale_date}
+                  {selectedSale.sale_date ? dayjs(selectedSale.sale_date).format("DD-MM-YYYY") : "—"}
                 </Typography>
               )}
               {saleDateLoading

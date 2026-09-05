@@ -1,23 +1,11 @@
 import React from "react";
-import {
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  Typography,
-  IconButton,
-  Box,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Chip,
-} from "@mui/material";
-import { X } from "lucide-react";
+import { Modal, Table, Tag, Typography } from "antd";
+import type { TableProps } from "antd";
 import { useTranslation } from "react-i18next";
 import { Expense } from "@/services/expenseService";
 import { formatNumber } from "@/constants";
+
+const { Text } = Typography;
 
 interface DayExpensesDialogProps {
   open: boolean;
@@ -33,79 +21,57 @@ const DayExpensesDialog: React.FC<DayExpensesDialogProps> = ({
   expenses,
 }) => {
   const { t } = useTranslation("reports");
-  const formattedDate = date || "";
+
+  const columns: TableProps<Expense>["columns"] = [
+    {
+      title: t("titleColumn"),
+      dataIndex: "title",
+      key: "title",
+    },
+    {
+      title: t("categoryColumn"),
+      dataIndex: "expense_category_name",
+      key: "category",
+      render: (name: string | null) => name || "—",
+    },
+    {
+      title: t("amountColumn"),
+      dataIndex: "amount",
+      key: "amount",
+      align: "center",
+      render: (amount: number | string) => <Text strong>{formatNumber(Number(amount))}</Text>,
+    },
+    {
+      title: t("paymentMethodColumn"),
+      dataIndex: "payment_method",
+      key: "payment_method",
+      align: "center",
+      render: (method: string | null) => (
+        <Tag color={method === "cash" ? "green" : method === "bank" ? "blue" : "default"}>
+          {method === "cash" ? t("paymentMethodCash") : method === "bank" ? t("bankShortLabel") : "—"}
+        </Tag>
+      ),
+    },
+    {
+      title: t("referenceColumn"),
+      dataIndex: "reference",
+      key: "reference",
+      render: (reference: string | null) => reference || "—",
+    },
+  ];
 
   return (
-    <Dialog open={open} onClose={onClose} maxWidth="md" fullWidth>
-      <DialogTitle
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <Typography variant="h6">
-          {t("expensesForDayLabel", { date: formattedDate })}
-        </Typography>
-        <IconButton onClick={onClose} size="small">
-          <X size={18} />
-        </IconButton>
-      </DialogTitle>
-      <DialogContent>
-        {expenses.length === 0 ? (
-          <Box sx={{ py: 4, textAlign: "center" }}>
-            <Typography variant="body2" color="text.secondary">
-              {t("noExpensesThisDay")}
-            </Typography>
-          </Box>
-        ) : (
-          <Table size="small">
-            <TableHead>
-              <TableRow sx={{ bgcolor: "grey.100" }}>
-                <TableCell sx={{ fontWeight: "bold" }}>{t("titleColumn")}</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>{t("categoryColumn")}</TableCell>
-                <TableCell sx={{ fontWeight: "bold" }} align="center">
-                  {t("amountColumn")}
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }} align="center">
-                  {t("paymentMethodColumn")}
-                </TableCell>
-                <TableCell sx={{ fontWeight: "bold" }}>{t("referenceColumn")}</TableCell>
-              </TableRow>
-            </TableHead>
-            <TableBody>
-              {expenses.map((expense) => (
-                <TableRow key={expense.id} hover>
-                  <TableCell>{expense.title}</TableCell>
-                  <TableCell>
-                    {expense.expense_category_name || "—"}
-                  </TableCell>
-                  <TableCell align="center" sx={{ fontWeight: "medium" }}>
-                    {formatNumber(Number(expense.amount))}
-                  </TableCell>
-                  <TableCell align="center">
-                    <Chip
-                      label={expense.payment_method === "cash" ? t("paymentMethodCash") : expense.payment_method === "bank" ? t("bankShortLabel") : "—"}
-                      size="small"
-                      color={
-                        expense.payment_method === "cash"
-                          ? "success"
-                          : expense.payment_method === "bank"
-                          ? "primary"
-                          : "default"
-                      }
-                    />
-                  </TableCell>
-                  <TableCell>{expense.reference || "—"}</TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </DialogContent>
-    </Dialog>
+    <Modal open={open} onCancel={onClose} footer={null} width={800} title={t("expensesForDayLabel", { date: date || "" })}>
+      <Table<Expense>
+        rowKey="id"
+        size="small"
+        columns={columns}
+        dataSource={expenses}
+        pagination={false}
+        locale={{ emptyText: t("noExpensesThisDay") }}
+      />
+    </Modal>
   );
 };
 
 export default DayExpensesDialog;
-

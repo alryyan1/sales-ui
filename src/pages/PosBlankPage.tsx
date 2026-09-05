@@ -1806,7 +1806,7 @@ const PosBlankPage: React.FC = () => {
                   </Stack>
 
                   {/* Financial Table */}
-                  <ShiftFinancialTable shiftId={shift.id} />
+                  <ShiftFinancialTable userId={user?.id} shiftId={shift.id} />
 
                   <Box sx={{ px: 2, pb: 2 }}>
                     <Button

@@ -18,12 +18,12 @@ import {
   Tag,
   Tooltip,
   Typography,
-  theme as antdTheme,
 } from "antd";
 import type { TableProps } from "antd";
 import arEG from "antd/locale/ar_EG";
 import enUS from "antd/locale/en_US";
 import "dayjs/locale/ar";
+import { getAntdThemeConfig } from "@/lib/antdTheme";
 import {
   ArrowLeft,
   ArrowRight,
@@ -244,12 +244,7 @@ const SalesReturnsListPage: React.FC = () => {
     <ConfigProvider
       direction={direction}
       locale={language === "ar" ? arEG : enUS}
-      theme={{
-        algorithm:
-          resolvedTheme === "dark"
-            ? antdTheme.darkAlgorithm
-            : antdTheme.defaultAlgorithm,
-      }}
+      theme={getAntdThemeConfig(resolvedTheme)}
     >
       <AntApp>
         <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>

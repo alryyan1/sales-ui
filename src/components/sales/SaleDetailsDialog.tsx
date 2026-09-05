@@ -17,7 +17,6 @@ import {
   Table,
   Tag,
   Typography,
-  theme as antdTheme,
 } from "antd";
 import type { TableProps } from "antd";
 import arEG from "antd/locale/ar_EG";
@@ -33,6 +32,7 @@ import {
   Trash2,
   User,
 } from "lucide-react";
+import { getAntdThemeConfig } from "@/lib/antdTheme";
 
 import { PdfViewerDialog } from "@/components/common/PdfViewerDialog";
 import { useFormatCurrency } from "@/hooks/useFormatCurrency";
@@ -284,7 +284,7 @@ export function SaleDetailsDialog({ saleId, open, onOpenChange, onChanged }: Sal
     <ConfigProvider
       direction={direction}
       locale={language === "ar" ? arEG : enUS}
-      theme={{ algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm }}
+      theme={getAntdThemeConfig(resolvedTheme)}
     >
       <AntApp>
         <Modal

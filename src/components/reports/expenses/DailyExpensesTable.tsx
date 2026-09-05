@@ -1,96 +1,77 @@
 import React from "react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Paper,
-  Typography,
-  Box,
-} from "@mui/material";
+import { Table, Typography } from "antd";
+import type { TableProps } from "antd";
 import { useTranslation } from "react-i18next";
 import { formatNumber } from "@/constants";
+import { Expense } from "@/services/expenseService";
+
+const { Text } = Typography;
 
 interface DailyExpenseEntry {
   date: string;
   total: number;
   cash_total: number;
   bank_total: number;
-  expenses: any[];
+  expenses: Expense[];
 }
 
 interface DailyExpensesTableProps {
   dailyBreakdown: DailyExpenseEntry[];
-  onDayClick: (date: string, expenses: any[]) => void;
+  loading?: boolean;
+  onDayClick: (date: string, expenses: Expense[]) => void;
 }
 
 const DailyExpensesTable: React.FC<DailyExpensesTableProps> = ({
   dailyBreakdown,
+  loading,
   onDayClick,
 }) => {
   const { t } = useTranslation("reports");
-  if (dailyBreakdown.length === 0) {
-    return (
-      <Box sx={{ py: 4, textAlign: "center" }}>
-        <Typography variant="body2" color="text.secondary">
-          {t("noExpensesThisMonth")}
-        </Typography>
-      </Box>
-    );
-  }
+
+  const columns: TableProps<DailyExpenseEntry>["columns"] = [
+    {
+      title: t("dateColumn"),
+      dataIndex: "date",
+      key: "date",
+    },
+    {
+      title: t("totalExpensesColumn"),
+      dataIndex: "total",
+      key: "total",
+      align: "center",
+      render: (value: number) => <Text strong>{formatNumber(value)}</Text>,
+    },
+    {
+      title: t("paymentMethodCash"),
+      dataIndex: "cash_total",
+      key: "cash_total",
+      align: "center",
+      render: (value: number) => <Text style={{ color: "#16a34a" }}>{formatNumber(value)}</Text>,
+    },
+    {
+      title: t("bankShortLabel"),
+      dataIndex: "bank_total",
+      key: "bank_total",
+      align: "center",
+      render: (value: number) => <Text style={{ color: "#2563eb" }}>{formatNumber(value)}</Text>,
+    },
+  ];
 
   return (
-    <TableContainer component={Paper} sx={{ borderRadius: 2 }}>
-      <Table>
-        <TableHead>
-          <TableRow sx={{ bgcolor: "grey.100" }}>
-            <TableCell sx={{ fontWeight: "bold" }}>{t("dateColumn")}</TableCell>
-            <TableCell sx={{ fontWeight: "bold" }} align="center">
-              {t("totalExpensesColumn")}
-            </TableCell>
-            <TableCell sx={{ fontWeight: "bold" }} align="center">
-              {t("paymentMethodCash")}
-            </TableCell>
-            <TableCell sx={{ fontWeight: "bold" }} align="center">
-              {t("bankShortLabel")}
-            </TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {dailyBreakdown.map((day) => {
-            const formattedDate = day.date;
-            return (
-              <TableRow
-                key={day.date}
-                hover
-                onClick={() => onDayClick(day.date, day.expenses)}
-                sx={{
-                  cursor: "pointer",
-                  "&:hover": {
-                    bgcolor: "action.hover",
-                  },
-                }}
-              >
-                <TableCell>{formattedDate}</TableCell>
-                <TableCell align="center" sx={{ fontWeight: "medium" }}>
-                  {formatNumber(day.total)}
-                </TableCell>
-                <TableCell align="center" sx={{ color: "success.main" }}>
-                  {formatNumber(day.cash_total)}
-                </TableCell>
-                <TableCell align="center" sx={{ color: "primary.main" }}>
-                  {formatNumber(day.bank_total)}
-                </TableCell>
-              </TableRow>
-            );
-          })}
-        </TableBody>
-      </Table>
-    </TableContainer>
+    <Table<DailyExpenseEntry>
+      rowKey="date"
+      size="small"
+      columns={columns}
+      dataSource={dailyBreakdown}
+      loading={loading}
+      locale={{ emptyText: t("noExpensesThisMonth") }}
+      pagination={false}
+      onRow={(row) => ({
+        onClick: () => onDayClick(row.date, row.expenses),
+        style: { cursor: "pointer" },
+      })}
+    />
   );
 };
 
 export default DailyExpensesTable;
-

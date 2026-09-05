@@ -10,11 +10,9 @@ import { useAuth } from "@/context/AuthContext";
 // page implies access to those shared/derived report pages too.
 const REPORT_NAV_ROUTES = [
   "/reports/sales",
-  "/reports/purchases",
   "/reports/inventory-log",
   "/reports/daily-income",
   "/reports/monthly-expenses",
-  "/reports/profit-overview",
   "/reports/best-selling-products",
   "/reports/stagnant-products",
   "/reports/low-stock-products",
@@ -44,7 +42,6 @@ const PERMISSION_NAV_ROUTES: Record<string, string[]> = {
   "view-reports": REPORT_NAV_ROUTES,
   "view-reports-sales": ["/reports/sales"],
   "view-reports-discounts": REPORT_NAV_ROUTES,
-  "view-reports-purchases": ["/reports/purchases"],
   "view-reports-inventory-log": ["/reports/inventory-log"],
   "view-reports-daily-income": ["/reports/daily-income"],
   "manage-users": ["/admin/users"],

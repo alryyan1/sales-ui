@@ -14,12 +14,12 @@ import {
   Progress,
   Select,
   Typography,
-  theme as antdTheme,
 } from "antd";
 import arEG from "antd/locale/ar_EG";
 import { KeyRound, PanelLeft, Settings2, ShieldCheck, UserRound } from "lucide-react";
 
 import { useTheme } from "@/context/ThemeContext";
+import { getAntdThemeConfig } from "@/lib/antdTheme";
 
 // Services and Types
 import userService, { Role } from "@/services/userService";
@@ -204,7 +204,7 @@ const UserFormModal: React.FC<UserFormModalProps> = ({
     <ConfigProvider
       direction="rtl"
       locale={arEG}
-      theme={{ algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm }}
+      theme={getAntdThemeConfig(resolvedTheme)}
     >
       <AntApp>
         <Modal

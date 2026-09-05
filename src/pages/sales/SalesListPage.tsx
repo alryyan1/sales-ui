@@ -25,11 +25,11 @@ import {
   Tag,
   Tooltip,
   Typography,
-  theme as antdTheme,
 } from "antd";
 import type { TableProps } from "antd";
 import arEG from "antd/locale/ar_EG";
 import enUS from "antd/locale/en_US";
+import { getAntdThemeConfig } from "@/lib/antdTheme";
 import {
   CheckCircle2,
   Columns3,
@@ -686,9 +686,7 @@ const SalesListPage: React.FC = () => {
     <ConfigProvider
       direction={direction}
       locale={language === "ar" ? arEG : enUS}
-      theme={{
-        algorithm: resolvedTheme === "dark" ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
-      }}
+      theme={getAntdThemeConfig(resolvedTheme)}
     >
       <AntApp>
         <div dir={direction} style={{ padding: 16, display: "flex", flexDirection: "column", gap: 16 }}>

@@ -34,7 +34,6 @@ import SaleDetailsPage from "./pages/sales/SaleDetailsPage";
 // Reports
 import SalesReportPage from "./pages/reports/SalesReportPage";
 import SaleReturnsReportPage from "./pages/reports/SaleReturnsReportPage";
-import PurchaseReportPage from "./pages/reports/PurchaseReportPage";
 import SalesWithDiscountsPage from "./pages/reports/SalesWithDiscountsPage";
 import DailyIncomeReportPage from "./pages/reports/DailyIncomeReportPage";
 import InventoryLogPage from "./pages/reports/InventoryLogPage";
@@ -42,7 +41,6 @@ import SuppliersSummaryPage from "./pages/reports/SuppliersSummaryPage";
 import SupplierPurchasesPage from "./pages/reports/SupplierPurchasesPage";
 import MonthlyExpensesPage from "./pages/reports/MonthlyExpensesPage";
 import ProfitLossReportPage from "./pages/reports/ProfitLossReportPage";
-import ProfitOverviewPage from "./pages/reports/ProfitOverviewPage";
 import ReportsDashboardPage from "./pages/reports/ReportsDashboardPage";
 import MonthlyShiftsReportPage from "./pages/reports/MonthlyShiftsReportPage";
 import BestSellingProductsPage from "./pages/reports/BestSellingProductsPage";
@@ -292,14 +290,6 @@ const router = createHashRouter([
                 ),
               },
               {
-                path: "purchases",
-                element: (
-                  <PermissionGuard requiredPermission="view-reports-purchases">
-                    <PurchaseReportPage />
-                  </PermissionGuard>
-                ),
-              },
-              {
                 path: "inventory-log",
                 element: (
                   <PermissionGuard requiredPermission="view-reports-inventory-log">
@@ -344,14 +334,6 @@ const router = createHashRouter([
                 element: (
                   <PermissionGuard requiredPermission="view-reports">
                     <ProfitLossReportPage />
-                  </PermissionGuard>
-                ),
-              },
-              {
-                path: "profit-overview",
-                element: (
-                  <PermissionGuard requiredPermission="view-reports">
-                    <ProfitOverviewPage />
                   </PermissionGuard>
                 ),
               },
